@@ -1,0 +1,57 @@
+services:
+  server:
+    build: .
+    ports:
+      - "${PORT}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    networks:
+      - my_network
+    environment:
+      DATABASE_DSN: "postgresql://postgres:passw@postgres:5432/dndmasters_db?sslmode=disable"
+      ADDRESS: "0.0.0.0:8080"
+      CRYPTO_KEY: "./certificates/private.pem"
+    restart: always
+
+  postgres:
+    image: library/postgres:17.2-alpine
+    container_name: dndmasters_pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: passw
+      POSTGRES_DB: dndmasters_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    command: >
+      postgres -c max_connections=1000
+               -c shared_buffers=256MB
+               -c effective_cache_size=768MB
+               -c maintenance_work_mem=64MB
+               -c checkpoint_completion_target=0.7
+               -c wal_buffers=16MB
+               -c default_statistics_target=100
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d dndmasters_pg" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    ports:
+      - "5432:5432"
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    driver: bridge

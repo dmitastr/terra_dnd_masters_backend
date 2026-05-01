@@ -1,0 +1,185 @@
+basePath: /api/v1/dnd
+definitions:
+  demands_handlers.DemandsRequest:
+    properties:
+      demands:
+        items:
+          $ref: '#/definitions/models.Demand'
+        type: array
+    type: object
+  demands_handlers.DemandsResponse:
+    properties:
+      demands:
+        items:
+          $ref: '#/definitions/models.Demand'
+        type: array
+    type: object
+  demands_handlers.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  masters_handlers.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  masters_handlers.MastersResponse:
+    properties:
+      dnd_masters:
+        items:
+          $ref: '#/definitions/models.Master'
+        type: array
+    type: object
+  models.Demand:
+    properties:
+      first_name:
+        type: string
+      for_week:
+        type: string
+      last_name:
+        type: string
+      slots:
+        items:
+          $ref: '#/definitions/models.Slot'
+        type: array
+      vk_id:
+        type: integer
+    type: object
+  models.Master:
+    properties:
+      name:
+        type: string
+      vk_id:
+        type: string
+    type: object
+  models.Slot:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      valid_from:
+        type: string
+      valid_until:
+        type: string
+    type: object
+  slots_handlers.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  slots_handlers.SlotsResponse:
+    properties:
+      slots:
+        items:
+          $ref: '#/definitions/models.Slot'
+        type: array
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8080
+info:
+  contact:
+    name: API Support
+    url: https://t.me/dmastr
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: https://terragames.ru/
+  title: Terra DND masters-service API
+  version: "1.0"
+paths:
+  /demands:
+    get:
+      description: Returns a list of demands for session for current week
+      parameters:
+      - description: week
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/demands_handlers.DemandsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+      summary: Get all demands for current week
+      tags:
+      - demands
+    post:
+      description: Add a list of user demands for session
+      parameters:
+      - description: A list of demands
+        in: body
+        name: demands
+        required: true
+        schema:
+          $ref: '#/definitions/demands_handlers.DemandsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/demands_handlers.DemandsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+      summary: Add demands
+      tags:
+      - demands
+  /masters:
+    get:
+      description: Returns a list of masters in JSON format
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/masters_handlers.MastersResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/masters_handlers.ErrorResponse'
+      summary: Get all masters
+      tags:
+      - masters
+  /slots:
+    get:
+      description: Returns a list of slots for current week
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/slots_handlers.SlotsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/slots_handlers.ErrorResponse'
+      summary: Get all slots-
+      tags:
+      - slots
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"
