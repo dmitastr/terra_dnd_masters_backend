@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"dnd_schedule/internal/datasources/slots"
 	"dnd_schedule/internal/domain/models"
+	"dnd_schedule/internal/repository/datasources/slots"
 )
 
 type ISlotsService interface {

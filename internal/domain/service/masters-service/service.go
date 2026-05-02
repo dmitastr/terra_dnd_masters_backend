@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	mastersDS "dnd_schedule/internal/datasources/masters"
 	"dnd_schedule/internal/domain/models"
+	mastersDS "dnd_schedule/internal/repository/datasources/masters"
 )
 
 type IMastersService interface {
