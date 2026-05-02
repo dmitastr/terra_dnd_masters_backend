@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"dnd_schedule/internal/datasources/demands"
 	"dnd_schedule/internal/domain/models"
+	"dnd_schedule/internal/repository/datasources/demands"
 )
 
 type IDemandsService interface {
