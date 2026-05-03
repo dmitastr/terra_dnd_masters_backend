@@ -2,6 +2,7 @@ package demands_service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,6 +33,16 @@ func (m DemandsService) GetDemands(ctx context.Context, week time.Time) ([]model
 }
 
 func (m DemandsService) AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
+	invalidDemands := make([]models.Demand, 0)
+	for _, demand := range demands {
+		if !demand.IsValid() {
+			invalidDemands = append(invalidDemands, demand)
+		}
+	}
+	if len(invalidDemands) > 0 {
+		return nil, errors.New("invalid demands")
+	}
+
 	newDemands, err := m.datasource.AddDemands(ctx, demands)
 	if err != nil {
 		return nil, fmt.Errorf("error adding demands: %v", err)
