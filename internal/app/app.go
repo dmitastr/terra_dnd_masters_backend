@@ -8,12 +8,14 @@ import (
 	"time"
 
 	"dnd_schedule/internal/config"
+	authenticateservice "dnd_schedule/internal/domain/service/authenticate-service"
 	"dnd_schedule/internal/domain/service/demands-service"
 	"dnd_schedule/internal/domain/service/masters-service"
 	"dnd_schedule/internal/domain/service/slots-service"
-	demandsHandlersPkg "dnd_schedule/internal/presentation/demands/demands-handlers"
-	mastersHandlersPkg "dnd_schedule/internal/presentation/masters/masters-handlers"
-	slotsHandlersPkg "dnd_schedule/internal/presentation/slots/slots-handlers"
+	"dnd_schedule/internal/presentation/core/middleware"
+	demandsHandlersPkg "dnd_schedule/internal/presentation/features/demands/demands-handlers"
+	mastersHandlersPkg "dnd_schedule/internal/presentation/features/masters/masters-handlers"
+	slotsHandlersPkg "dnd_schedule/internal/presentation/features/slots/slots-handlers"
 	"dnd_schedule/internal/testing/datasource"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -31,9 +33,9 @@ type DndMastersApp struct {
 
 func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider) (*DndMastersApp, error) {
 	docs.SwaggerInfo.Title = "Swagger Example API"
-	docs.SwaggerInfo.Description = "This is a sample server Petstore server."
+	docs.SwaggerInfo.Description = "Terra dnd scheduling app"
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = "petstore.swagger.io"
+	docs.SwaggerInfo.Host = "terra.ru"
 	docs.SwaggerInfo.BasePath = "api/v1/dnd"
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
@@ -50,7 +52,10 @@ func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider) (*DndMaste
 	slotsService := slots_service.NewSlotsService(db)
 	slotsHandler := slotsHandlersPkg.NewSlotsHandler(cfg, slotsService)
 
-	if err := app.registerHandlers(router, mastersHandler, slotsHandler, demandsHandler); err != nil {
+	authService := authenticateservice.NewAuthService(db)
+	middlewareProvider := middleware.NewMiddlewareProvider(cfg, authService)
+
+	if err := app.registerHandlers(router, mastersHandler, slotsHandler, demandsHandler, middlewareProvider); err != nil {
 		return nil, fmt.Errorf("register mastersHandlersPkg failed: %s", err)
 	}
 
@@ -84,12 +89,13 @@ func (app *DndMastersApp) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (app *DndMastersApp) registerHandlers(router *gin.Engine, mastersHandler mastersHandlersPkg.IMastersHandler, slotsHandler slotsHandlersPkg.ISlotsHandler, demandsHandler demandsHandlersPkg.IDemandsHandler) error {
+func (app *DndMastersApp) registerHandlers(router *gin.Engine, mastersHandler mastersHandlersPkg.IMastersHandler, slotsHandler slotsHandlersPkg.ISlotsHandler, demandsHandler demandsHandlersPkg.IDemandsHandler, middlewareProvider *middleware.MiddlewareProvider) error {
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
 	apiPath := router.Group("/api/v1/dnd")
 
 	// use ginSwagger middleware to serve the API docs
 	apiPath.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	apiPath.Use(middlewareProvider.VerifyJWT)
 
 	mastersPath := apiPath.Group("masters")
 
