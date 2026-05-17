@@ -23,10 +23,11 @@ var demands = []models.Demand{
 				ValidUntil: "9999-01-01",
 			},
 		},
-		VkID:      0,
-		FirstName: "Иван",
-		LastName:  "Пупкин",
-		ForWeek:   week,
+		VkID:         0,
+		FirstName:    "Иван",
+		LastName:     "Пупкин",
+		ForWeek:      week,
+		PlayersCount: 1,
 	},
 	{
 		Slots: []models.Slot{
@@ -37,10 +38,11 @@ var demands = []models.Demand{
 				ValidUntil: "9999-01-01",
 			},
 		},
-		VkID:      0,
-		FirstName: "Мария",
-		LastName:  "Залупкина",
-		ForWeek:   week,
+		VkID:         0,
+		FirstName:    "Мария",
+		LastName:     "Залупкина",
+		ForWeek:      week,
+		PlayersCount: 2,
 	},
 }
 

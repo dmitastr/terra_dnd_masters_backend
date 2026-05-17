@@ -20,11 +20,13 @@ type DemandsRequest struct {
 }
 
 type ErrorResponse struct {
-	Error string `json:"error"`
+	Error      string          `json:"error"`
+	BadDemands []models.Demand `json:"bad_demands"`
 }
 
 type IDemandsHandler interface {
 	GetDemands(ctx *gin.Context)
+	GetDemandForUser(ctx *gin.Context)
 	AddDemands(ctx *gin.Context)
 	DeleteDemands(c *gin.Context)
 }
@@ -67,6 +69,22 @@ func (m DemandsHandler) GetDemands(ctx *gin.Context) {
 	}
 	resp := DemandsResponse{Demands: dndDemands}
 	ctx.JSON(http.StatusOK, resp)
+}
+
+// GetDemandForUser godoc
+// @Summary Get all demands for specific user for current week
+// @Description Returns a list of demands for session for current week
+// @Tags demands
+// @Produce json
+// @Param id query string true "week"
+// @Param id query int true "user_id"
+// @Success 200 {object} DemandsResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /demands [get]
+func (m DemandsHandler) GetDemandForUser(ctx *gin.Context) {
+	// TODO implement me
+	panic("implement me")
 }
 
 // AddDemands godoc

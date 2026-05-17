@@ -16,6 +16,14 @@ func NewDatasource() *DummyDatasource {
 	return &DummyDatasource{demandsDS: testData.NewDemandsDS()}
 }
 
+func (d DummyDatasource) AddUser(ctx context.Context, user *models.User) (*models.User, error) {
+	return user, nil
+}
+
+func (d DummyDatasource) GetUser(ctx context.Context, user *models.User) (*models.User, error) {
+	return user, nil
+}
+
 func (d DummyDatasource) GetMasters(ctx context.Context) ([]models.Master, error) {
 	return testData.Masters, nil
 }
