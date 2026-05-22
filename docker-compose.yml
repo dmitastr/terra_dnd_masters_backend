@@ -2,7 +2,7 @@ services:
   server:
     build: .
     ports:
-      - "${PORT}:8080"
+      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -10,9 +10,13 @@ services:
     networks:
       - my_network
     environment:
-      DATABASE_DSN: "postgresql://postgres:passw@postgres:5432/dndmasters_db?sslmode=disable"
-      ADDRESS: "0.0.0.0:8080"
-      CRYPTO_KEY: "./certificates/private.pem"
+      HOST: 0.0.0.0
+      PORT: 8080
+      DB_USER: postgres
+      DB_PASSWORD: passw
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dndmasters_db
     restart: always
 
   postgres:
@@ -40,7 +44,7 @@ services:
                -c wal_buffers=16MB
                -c default_statistics_target=100
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d dndmasters_pg" ]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d dndmasters_db" ]
       interval: 30s
       timeout: 10s
       retries: 5

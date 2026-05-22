@@ -1,4 +1,4 @@
-FROM golang:1.26 AS builder
+FROM golang:1.25 AS builder
 WORKDIR /app
 
 COPY . .
@@ -12,6 +12,10 @@ WORKDIR /app
 RUN apk --no-cache add ca-certificates
 
 COPY --from=builder /app/dndapi /app/dndapi
+COPY migrations/ /app/migrations/
+RUN ls -la /app/migrations/*
+RUN touch .env
+
 
 EXPOSE 8080
 CMD ["/app/dndapi"]

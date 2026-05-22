@@ -23,63 +23,24 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/demands": {
-            "get": {
-                "description": "Returns a list of demands for session for current week",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "demands"
-                ],
-                "summary": "Get all demands for current week",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "week",
-                        "name": "id",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/demands_handlers.DemandsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
-                        }
-                    }
-                }
-            },
+        "/register": {
             "post": {
-                "description": "Add a list of user demands for session",
+                "description": "Add new user and returns token for basic auth",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "demands"
+                    "auth"
                 ],
-                "summary": "Add demands",
+                "summary": "Add new user",
                 "parameters": [
                     {
-                        "description": "A list of demands",
-                        "name": "demands",
+                        "description": "User payload",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/demands_handlers.DemandsRequest"
+                            "$ref": "#/definitions/authenticate_requests.AuthRequest"
                         }
                     }
                 ],
@@ -87,71 +48,62 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/demands_handlers.DemandsResponse"
+                            "$ref": "#/definitions/authenticate_requests.AuthResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
+                            "$ref": "#/definitions/authenticate_requests.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
+                            "$ref": "#/definitions/authenticate_requests.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/masters": {
+        "/token": {
             "get": {
-                "description": "Returns a list of masters in JSON format",
+                "description": "Get token for current user",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "masters"
+                    "auth"
                 ],
-                "summary": "Get all masters",
-                "responses": {
-                    "200": {
-                        "description": "OK",
+                "summary": "get token",
+                "parameters": [
+                    {
+                        "description": "User payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
                         "schema": {
-                            "$ref": "#/definitions/masters_handlers.MastersResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/masters_handlers.ErrorResponse"
+                            "$ref": "#/definitions/authenticate_requests.AuthRequest"
                         }
                     }
-                }
-            }
-        },
-        "/slots": {
-            "get": {
-                "description": "Returns a list of slots for current week",
-                "produces": [
-                    "application/json"
                 ],
-                "tags": [
-                    "slots"
-                ],
-                "summary": "Get all slots-",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/slots_handlers.SlotsResponse"
+                            "$ref": "#/definitions/authenticate_requests.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/authenticate_requests.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/slots_handlers.ErrorResponse"
+                            "$ref": "#/definitions/authenticate_requests.ErrorResponse"
                         }
                     }
                 }
@@ -159,29 +111,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "demands_handlers.DemandsRequest": {
+        "authenticate_requests.AuthRequest": {
             "type": "object",
             "properties": {
-                "demands": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Demand"
-                    }
+                "user": {
+                    "$ref": "#/definitions/models.User"
                 }
             }
         },
-        "demands_handlers.DemandsResponse": {
+        "authenticate_requests.AuthResponse": {
             "type": "object",
             "properties": {
-                "demands": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Demand"
-                    }
+                "token": {
+                    "type": "string"
                 }
             }
         },
-        "demands_handlers.ErrorResponse": {
+        "authenticate_requests.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -189,92 +135,23 @@ const docTemplate = `{
                 }
             }
         },
-        "masters_handlers.ErrorResponse": {
+        "models.User": {
             "type": "object",
             "properties": {
-                "error": {
-                    "type": "string"
-                }
-            }
-        },
-        "masters_handlers.MastersResponse": {
-            "type": "object",
-            "properties": {
-                "dnd_masters": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Master"
-                    }
-                }
-            }
-        },
-        "models.Demand": {
-            "type": "object",
-            "properties": {
-                "first_name": {
+                "created_at": {
                     "type": "string"
                 },
-                "for_week": {
+                "hash": {
                     "type": "string"
                 },
-                "last_name": {
+                "password": {
                     "type": "string"
                 },
-                "slots": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Slot"
-                    }
-                },
-                "vk_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.Master": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "vk_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Slot": {
-            "type": "object",
-            "properties": {
-                "id": {
+                "user_id": {
                     "type": "integer"
                 },
-                "name": {
+                "username": {
                     "type": "string"
-                },
-                "valid_from": {
-                    "type": "string"
-                },
-                "valid_until": {
-                    "type": "string"
-                }
-            }
-        },
-        "slots_handlers.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string"
-                }
-            }
-        },
-        "slots_handlers.SlotsResponse": {
-            "type": "object",
-            "properties": {
-                "slots": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Slot"
-                    }
                 }
             }
         }

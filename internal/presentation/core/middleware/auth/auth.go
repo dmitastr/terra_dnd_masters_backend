@@ -25,10 +25,6 @@ func (b BearerValidator) VerifyJWT(c *gin.Context) {
 		return
 	}
 	token := tokenParts[1]
-	if token != "" {
-		c.Next()
-		return
-	}
 
 	claims, err := b.authService.VerifyJWT(token)
 	if err != nil {

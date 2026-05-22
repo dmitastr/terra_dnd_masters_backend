@@ -60,6 +60,7 @@ func (m DemandsHandler) GetDemands(ctx *gin.Context) {
 	dttm, err := time.Parse("2006-01-02", week)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
 	}
 
 	dndDemands, err := m.service.GetDemands(ctx, dttm)
