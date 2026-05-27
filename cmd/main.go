@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
 
 	dndapp "dnd_schedule/internal/app"
 	"dnd_schedule/internal/config"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -33,6 +33,7 @@ import (
 // @externalDocs.description  OpenAPI
 // @externalDocs.url          https://swagger.io/resources/open-api/
 func main() {
+	log := logrus.New()
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -43,7 +44,7 @@ func main() {
 		stop()
 	}()
 
-	app, err := dndapp.NewDndMastersApp(ctx, cfg)
+	app, err := dndapp.NewDndMastersApp(ctx, cfg, log)
 	if err != nil {
 		panic(err)
 	}
@@ -62,6 +63,6 @@ func main() {
 	})
 
 	if err := g.Wait(); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

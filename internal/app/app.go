@@ -18,10 +18,13 @@ import (
 	mastersHandlersPkg "dnd_schedule/internal/presentation/features/masters-handlers"
 	slotsHandlersPkg "dnd_schedule/internal/presentation/features/slots-handlers"
 	"dnd_schedule/internal/repository/datasources/authenticate"
+	"dnd_schedule/internal/repository/datasources/demands"
+	"dnd_schedule/internal/repository/datasources/slots"
 	"dnd_schedule/internal/repository/migrations"
 	"dnd_schedule/internal/testing/datasource"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
@@ -34,7 +37,7 @@ type DndMastersApp struct {
 	cfg    config.ConfigProvider
 }
 
-func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider) (*DndMastersApp, error) {
+func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider, log *logrus.Logger) (*DndMastersApp, error) {
 	docs.SwaggerInfo.Title = "Swagger Example API"
 	docs.SwaggerInfo.Description = "Terra dnd scheduling app"
 	docs.SwaggerInfo.Version = "1.0"
@@ -54,10 +57,12 @@ func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider) (*DndMaste
 	mastersService := masters_service.NewMastersService(db)
 	mastersHandler := mastersHandlersPkg.NewMastersHandler(cfg, mastersService)
 
-	demandsService := demands_service.NewDemandsService(db)
+	demandsDS := demands.NewDemandsDS(pool, log)
+	demandsService := demands_service.NewDemandsService(demandsDS)
 	demandsHandler := demandsHandlersPkg.NewDemandsHandler(cfg, demandsService)
 
-	slotsService := slots_service.NewSlotsService(db)
+	slotsDS := slots.NewSlotsDS(pool, log)
+	slotsService := slots_service.NewSlotsService(slotsDS, log)
 	slotsHandler := slotsHandlersPkg.NewSlotsHandler(cfg, slotsService)
 
 	authDb := authenticate.NewAuthDatasource(pool)
