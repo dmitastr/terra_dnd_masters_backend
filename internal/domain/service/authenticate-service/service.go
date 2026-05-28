@@ -9,7 +9,7 @@ import (
 	"dnd_schedule/internal/domain/hash_manager"
 	"dnd_schedule/internal/domain/models"
 	"dnd_schedule/internal/domain/tokenmanager"
-	"dnd_schedule/internal/presentation/features/authenticate/authenticate_requests"
+	"dnd_schedule/internal/presentation/features/authenticate/authenticate-requests"
 	"dnd_schedule/internal/repository/datasources/authenticate"
 )
 

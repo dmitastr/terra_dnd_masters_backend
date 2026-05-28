@@ -15,6 +15,93 @@ definitions:
       error:
         type: string
     type: object
+  demands_handlers.DemandsRequest:
+    properties:
+      demands:
+        items:
+          $ref: '#/definitions/models.Demand'
+        type: array
+    type: object
+  demands_handlers.DemandsResponse:
+    properties:
+      demands:
+        items:
+          $ref: '#/definitions/models.Demand'
+        type: array
+    type: object
+  demands_handlers.ErrorResponse:
+    properties:
+      bad_demands:
+        items:
+          $ref: '#/definitions/models.Demand'
+        type: array
+      error:
+        type: string
+    type: object
+  masters_handlers.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  masters_handlers.MastersRequestWithPayload:
+    properties:
+      dnd_masters:
+        items:
+          $ref: '#/definitions/models.Master'
+        type: array
+    type: object
+  masters_handlers.MastersResponseWithPayload:
+    properties:
+      dnd_masters:
+        items:
+          $ref: '#/definitions/models.Master'
+        type: array
+    type: object
+  models.Demand:
+    properties:
+      first_name:
+        type: string
+      for_week:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      players_count:
+        type: integer
+      slots:
+        items:
+          $ref: '#/definitions/models.Slot'
+        type: array
+      vk_id:
+        type: integer
+    type: object
+  models.Master:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      vk_id:
+        type: integer
+    type: object
+  models.Slot:
+    properties:
+      id:
+        example: 13
+        type: integer
+      name:
+        example: пн вечер
+        type: string
+      valid_from:
+        example: "2020-01-01"
+        type: string
+      valid_until:
+        example: "2020-01-01"
+        type: string
+    type: object
   models.User:
     properties:
       created_at:
@@ -27,6 +114,25 @@ definitions:
         type: integer
       username:
         type: string
+    type: object
+  slots_handlers.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  slots_handlers.SlotsRequest:
+    properties:
+      slots:
+        items:
+          $ref: '#/definitions/models.Slot'
+        type: array
+    type: object
+  slots_handlers.SlotsResponse:
+    properties:
+      slots:
+        items:
+          $ref: '#/definitions/models.Slot'
+        type: array
     type: object
 externalDocs:
   description: OpenAPI
@@ -43,6 +149,171 @@ info:
   title: Terra DND masters-service API
   version: "1.0"
 paths:
+  /demands:
+    get:
+      description: Returns a list of demands for session for current week
+      parameters:
+      - description: week for fetching demands
+        example: "2020-01-01"
+        in: query
+        name: week
+        required: true
+        type: string
+      - description: vk user id
+        example: 123
+        in: query
+        name: vk_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/demands_handlers.DemandsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+      summary: Get all demands for specific user for current week
+      tags:
+      - demands
+    post:
+      description: Add a list of user demands for session
+      parameters:
+      - description: A list of demands
+        in: body
+        name: demands
+        required: true
+        schema:
+          $ref: '#/definitions/demands_handlers.DemandsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/demands_handlers.DemandsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+      summary: Add demands
+      tags:
+      - demands
+  /masters:
+    delete:
+      description: DeleteMasters
+      parameters:
+      - collectionFormat: multi
+        description: List of master IDs
+        in: query
+        items:
+          type: integer
+        name: masterIDs
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/masters_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/masters_handlers.ErrorResponse'
+      summary: Delete masters
+      tags:
+      - masters
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of masters in JSON format
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/masters_handlers.MastersResponseWithPayload'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/masters_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/masters_handlers.ErrorResponse'
+      summary: Get all masters
+      tags:
+      - masters
+    post:
+      consumes:
+      - application/json
+      description: Add list of masters
+      parameters:
+      - description: A list of masters
+        in: body
+        name: demands
+        required: true
+        schema:
+          $ref: '#/definitions/masters_handlers.MastersRequestWithPayload'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/masters_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/masters_handlers.ErrorResponse'
+      summary: Add list of masters
+      tags:
+      - masters
+    put:
+      consumes:
+      - application/json
+      description: UpdateMasters
+      parameters:
+      - description: A list of masters
+        in: body
+        name: demands
+        required: true
+        schema:
+          $ref: '#/definitions/masters_handlers.MastersRequestWithPayload'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/masters_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/masters_handlers.ErrorResponse'
+      summary: Update masters
+      tags:
+      - masters
   /register:
     post:
       description: Add new user and returns token for basic auth
@@ -71,6 +342,117 @@ paths:
       summary: Add new user
       tags:
       - auth
+  /slots:
+    delete:
+      description: Delete slots by list of id
+      parameters:
+      - collectionFormat: multi
+        description: List of slot IDs
+        in: query
+        items:
+          type: integer
+        name: slot_id
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/slots_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/slots_handlers.ErrorResponse'
+      summary: Delete slots
+      tags:
+      - slots
+    get:
+      description: Returns a list of slots for current week
+      parameters:
+      - description: min date for getting slots
+        example: "2020-01-01"
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: max date for getting slots
+        example: "2020-01-01"
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/slots_handlers.SlotsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/slots_handlers.ErrorResponse'
+      summary: Get all slots
+      tags:
+      - slots
+    post:
+      consumes:
+      - application/json
+      description: Add list of new slots
+      parameters:
+      - description: list of slots
+        in: body
+        name: slots
+        required: true
+        schema:
+          $ref: '#/definitions/slots_handlers.SlotsRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/slots_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/slots_handlers.ErrorResponse'
+      summary: Add slots
+      tags:
+      - slots
+    put:
+      consumes:
+      - application/json
+      description: Update slots
+      parameters:
+      - description: list of slots
+        in: body
+        name: slots
+        required: true
+        schema:
+          $ref: '#/definitions/slots_handlers.SlotsRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/slots_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/slots_handlers.ErrorResponse'
+      summary: Update slots
+      tags:
+      - slots
   /token:
     get:
       description: Get token for current user

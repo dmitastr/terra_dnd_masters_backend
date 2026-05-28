@@ -1,19 +1,19 @@
-# 🐉 DnD Event Scheduling Server (Go)
+# DnD Event Scheduling Server (Go)
 
 A backend service for managing and scheduling tabletop RPG sessions like Dungeons & Dragons.  
 Built with a focus on clean architecture, simplicity, and scalability using Go.
 
 ---
 
-## 📌 Overview
+## Overview
 
 This project is a RESTful server that allows users to create, manage, and schedule DnD events (sessions, campaigns, game nights). It is designed as a lightweight, extensible backend that can later be integrated with a frontend or expanded with persistent storage.
 
 ---
 
-## 🚀 Features
+## Features
 
-- Create and manage DnD events
+- Collect user demands for time slot of a session
 - Schedule sessions with date/time handling
 - Uses Postgres for data storage (via docker container)
 - RESTful JSON API
@@ -22,10 +22,10 @@ This project is a RESTful server that allows users to create, manage, and schedu
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Language:** Go (Golang)
-- **HTTP Server:** `gin` (standard library)
+- **HTTP Server:** `gin` 
 - **Architecture:** Layered (handlers → services → repository)
 - **Data Storage:** PostgreSQL
 - **Containerization:** Docker
@@ -33,15 +33,15 @@ This project is a RESTful server that allows users to create, manage, and schedu
 
 ---
 
-## 🧠 Architecture & Design
+## Architecture & Design
 
 This project follows a modular and testable architecture:
 
 ```
 /cmd # Application entrypoint
 /internal
-    /handler # HTTP handlers (request/response logic)
-    /service # Business logic
+    /presentation # HTTP handlers (request/response logic) and middleware
+    /domain # Business logic and models
     /repository # Data access layer (in-memory implementation)
 ```
 
@@ -63,7 +63,7 @@ This project follows a modular and testable architecture:
 
 ---
 
-## 🐳 Running with Docker
+## Running with Docker
 
 ```bash
 docker-compose build 

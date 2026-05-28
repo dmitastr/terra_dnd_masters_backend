@@ -22,8 +22,7 @@ type DemandsRequest struct {
 }
 
 type ErrorResponse struct {
-	Error      string          `json:"error"`
-	BadDemands []models.Demand `json:"bad_demands"`
+	Error string `json:"error"`
 }
 
 type IDemandsHandler interface {
