@@ -13,12 +13,18 @@ import (
 	"dnd_schedule/internal/domain/service/masters-service"
 	"dnd_schedule/internal/domain/service/slots-service"
 	"dnd_schedule/internal/presentation/core/middleware"
-	demandsHandlersPkg "dnd_schedule/internal/presentation/features/demands/demands-handlers"
-	mastersHandlersPkg "dnd_schedule/internal/presentation/features/masters/masters-handlers"
-	slotsHandlersPkg "dnd_schedule/internal/presentation/features/slots/slots-handlers"
-	"dnd_schedule/internal/testing/datasource"
+	"dnd_schedule/internal/presentation/features/authenticate/authenticate-handlers"
+	demandsHandlersPkg "dnd_schedule/internal/presentation/features/demands-handlers"
+	mastersHandlersPkg "dnd_schedule/internal/presentation/features/masters-handlers"
+	slotsHandlersPkg "dnd_schedule/internal/presentation/features/slots-handlers"
+	"dnd_schedule/internal/repository/datasources/authenticate"
+	"dnd_schedule/internal/repository/datasources/demands"
+	"dnd_schedule/internal/repository/datasources/masters"
+	"dnd_schedule/internal/repository/datasources/slots"
+	"dnd_schedule/internal/repository/migrations"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
@@ -31,7 +37,7 @@ type DndMastersApp struct {
 	cfg    config.ConfigProvider
 }
 
-func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider) (*DndMastersApp, error) {
+func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider, log *logrus.Logger) (*DndMastersApp, error) {
 	docs.SwaggerInfo.Title = "Swagger Example API"
 	docs.SwaggerInfo.Description = "Terra dnd scheduling app"
 	docs.SwaggerInfo.Version = "1.0"
@@ -42,21 +48,32 @@ func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider) (*DndMaste
 	app := &DndMastersApp{cfg: cfg}
 	router := gin.Default()
 
-	db := datasource.NewDatasource()
-	mastersService := masters_service.NewMastersService(db)
-	mastersHandler := mastersHandlersPkg.NewMastersHandler(cfg, mastersService)
+	pool, err := migrations.Run(ctx, cfg.GetDBConfig())
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database connection: %w", err)
+	}
 
-	demandsService := demands_service.NewDemandsService(db)
+	// db := datasource.NewDatasource()
+
+	mastersDS := masters.NewMastersDS(pool, log)
+	mastersService := masters_service.NewMastersService(mastersDS, log)
+	mastersHandler := mastersHandlersPkg.NewMastersHandler(cfg, mastersService, log)
+
+	demandsDS := demands.NewDemandsDS(pool, log)
+	demandsService := demands_service.NewDemandsService(demandsDS)
 	demandsHandler := demandsHandlersPkg.NewDemandsHandler(cfg, demandsService)
 
-	slotsService := slots_service.NewSlotsService(db)
-	slotsHandler := slotsHandlersPkg.NewSlotsHandler(cfg, slotsService)
+	slotsDS := slots.NewSlotsDS(pool, log)
+	slotsService := slots_service.NewSlotsService(slotsDS, log)
+	slotsHandler := slotsHandlersPkg.NewSlotsHandler(cfg, slotsService, log)
 
-	authService := authenticateservice.NewAuthService(db)
+	authDb := authenticate.NewAuthDatasource(pool)
+	authService := authenticateservice.NewAuthService(authDb)
 	middlewareProvider := middleware.NewMiddlewareProvider(cfg, authService)
+	authHandler := authenticate_handlers.NewAuthHandler(cfg, authService)
 
-	if err := app.registerHandlers(router, mastersHandler, slotsHandler, demandsHandler, middlewareProvider); err != nil {
-		return nil, fmt.Errorf("register mastersHandlersPkg failed: %s", err)
+	if err := app.registerHandlers(router, mastersHandler, slotsHandler, demandsHandler, middlewareProvider, authHandler); err != nil {
+		return nil, fmt.Errorf("register handlers failed: %s", err)
 	}
 
 	srv := &http.Server{
@@ -89,26 +106,32 @@ func (app *DndMastersApp) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (app *DndMastersApp) registerHandlers(router *gin.Engine, mastersHandler mastersHandlersPkg.IMastersHandler, slotsHandler slotsHandlersPkg.ISlotsHandler, demandsHandler demandsHandlersPkg.IDemandsHandler, middlewareProvider *middleware.MiddlewareProvider) error {
+func (app *DndMastersApp) registerHandlers(router *gin.Engine, mastersHandler mastersHandlersPkg.IMastersHandler, slotsHandler slotsHandlersPkg.ISlotsHandler, demandsHandler demandsHandlersPkg.IDemandsHandler, middlewareProvider *middleware.MiddlewareProvider, authHandlers authenticate_handlers.IAuthHandler) error {
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
 	apiPath := router.Group("/api/v1/dnd")
 
 	// use ginSwagger middleware to serve the API docs
 	apiPath.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	apiPath.Use(middlewareProvider.VerifyJWT)
+
+	authPath := apiPath.Group("auth")
+	authPath.POST(`/register`, authHandlers.AddUser)
+	authPath.GET(`/token`, authHandlers.GetToken)
 
 	mastersPath := apiPath.Group("masters")
+	mastersPath.Use(middlewareProvider.VerifyJWT)
 
 	mastersPath.GET(`/`, mastersHandler.GetMasters)
 	mastersPath.POST(`/`, mastersHandler.AddMasters)
 	mastersPath.DELETE(`/{id}`, mastersHandler.DeleteMasters)
 
 	demandsPath := apiPath.Group("demands")
+	demandsPath.Use(middlewareProvider.VerifyJWT)
 
 	demandsPath.GET(`/`, demandsHandler.GetDemands)
 	demandsPath.POST(`/`, demandsHandler.AddDemands)
 
 	slotsPath := apiPath.Group("slots")
+	slotsPath.Use(middlewareProvider.VerifyJWT)
 
 	slotsPath.GET(`/`, slotsHandler.GetSlots)
 	slotsPath.POST(`/`, slotsHandler.AddSlots)

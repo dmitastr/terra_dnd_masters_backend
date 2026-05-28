@@ -12,6 +12,7 @@ import (
 
 type IDemandsService interface {
 	GetDemands(ctx context.Context, week time.Time) ([]models.Demand, error)
+	GetDemandsForUser(ctx context.Context, week time.Time, vk_id int) ([]models.Demand, error)
 	AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
 	DeleteDemands(ctx context.Context, masters []models.Demand) error
 }
@@ -22,6 +23,11 @@ type DemandsService struct {
 
 func NewDemandsService(datasource demands.IDatasource) IDemandsService {
 	return &DemandsService{datasource: datasource}
+}
+
+func (m DemandsService) GetDemandsForUser(ctx context.Context, week time.Time, vk_id int) ([]models.Demand, error) {
+	// TODO implement me
+	panic("implement me")
 }
 
 func (m DemandsService) GetDemands(ctx context.Context, week time.Time) ([]models.Demand, error) {

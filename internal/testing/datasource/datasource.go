@@ -20,8 +20,8 @@ func (d DummyDatasource) AddUser(ctx context.Context, user *models.User) (*model
 	return user, nil
 }
 
-func (d DummyDatasource) GetUser(ctx context.Context, user *models.User) (*models.User, error) {
-	return user, nil
+func (d DummyDatasource) GetUser(ctx context.Context, username string) (*models.User, error) {
+	return &models.User{Username: username}, nil
 }
 
 func (d DummyDatasource) GetMasters(ctx context.Context) ([]models.Master, error) {
