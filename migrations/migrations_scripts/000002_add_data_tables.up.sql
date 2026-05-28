@@ -50,7 +50,9 @@ CREATE TABLE IF NOT EXISTS slots_default (
 -- }
 
 CREATE TABLE IF NOT EXISTS masters (
-     id serial  ,
-     name VARCHAR(40) not null,
-     vk_id int not null primary key
+    id serial  ,
+    name VARCHAR(40) not null,
+    vk_id int not null primary key,
+    created_at timestamp not null,
+    updated_at timestamp not null
 );

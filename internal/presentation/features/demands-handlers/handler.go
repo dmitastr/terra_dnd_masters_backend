@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"dnd_schedule/internal/common/constants"
 	"dnd_schedule/internal/config"
 	"dnd_schedule/internal/domain/models"
 	"dnd_schedule/internal/domain/service/demands-service"
@@ -47,7 +48,7 @@ func NewDemandsHandler(cfg config.ConfigProvider, service demands_service.IDeman
 // @Description Returns a list of demands for session for current week
 // @Tags demands
 // @Produce json
-// @Param id query string true "week" example(2020-01-01)
+// @Param week query string true "week" example(2020-01-01)
 // @Success 200 {object} DemandsResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -59,7 +60,7 @@ func (m DemandsHandler) GetDemands(ctx *gin.Context) {
 		return
 	}
 
-	dttm, err := time.Parse("2006-01-02", week)
+	dttm, err := time.Parse(constants.Layout, week)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		return
@@ -87,19 +88,19 @@ func (m DemandsHandler) GetDemands(ctx *gin.Context) {
 // @Router /demands [get]
 func (m DemandsHandler) GetDemandForUser(ctx *gin.Context) {
 	week := ctx.Query("week")
-	vk_id := ctx.Query("vk_id")
-	if week == "" || vk_id == "" {
-		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: errors.New("week  and vk_id is required").Error()})
+	vkID := ctx.Query("vkID")
+	if week == "" || vkID == "" {
+		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: errors.New("week  and vkID is required").Error()})
 		return
 	}
 
-	dttm, err := time.Parse("2006-01-02", week)
+	dt, err := time.Parse(constants.Layout, week)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	dndDemands, err := m.service.GetDemands(ctx, dttm)
+	dndDemands, err := m.service.GetDemands(ctx, dt)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return

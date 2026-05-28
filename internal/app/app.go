@@ -19,9 +19,9 @@ import (
 	slotsHandlersPkg "dnd_schedule/internal/presentation/features/slots-handlers"
 	"dnd_schedule/internal/repository/datasources/authenticate"
 	"dnd_schedule/internal/repository/datasources/demands"
+	"dnd_schedule/internal/repository/datasources/masters"
 	"dnd_schedule/internal/repository/datasources/slots"
 	"dnd_schedule/internal/repository/migrations"
-	"dnd_schedule/internal/testing/datasource"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -53,9 +53,11 @@ func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider, log *logru
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
 
-	db := datasource.NewDatasource()
-	mastersService := masters_service.NewMastersService(db)
-	mastersHandler := mastersHandlersPkg.NewMastersHandler(cfg, mastersService)
+	// db := datasource.NewDatasource()
+
+	mastersDS := masters.NewMastersDS(pool, log)
+	mastersService := masters_service.NewMastersService(mastersDS, log)
+	mastersHandler := mastersHandlersPkg.NewMastersHandler(cfg, mastersService, log)
 
 	demandsDS := demands.NewDemandsDS(pool, log)
 	demandsService := demands_service.NewDemandsService(demandsDS)
@@ -63,7 +65,7 @@ func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider, log *logru
 
 	slotsDS := slots.NewSlotsDS(pool, log)
 	slotsService := slots_service.NewSlotsService(slotsDS, log)
-	slotsHandler := slotsHandlersPkg.NewSlotsHandler(cfg, slotsService)
+	slotsHandler := slotsHandlersPkg.NewSlotsHandler(cfg, slotsService, log)
 
 	authDb := authenticate.NewAuthDatasource(pool)
 	authService := authenticateservice.NewAuthService(authDb)
