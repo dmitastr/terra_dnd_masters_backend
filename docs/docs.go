@@ -23,6 +23,254 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/demands": {
+            "get": {
+                "description": "Returns a list of demands for session for current week",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "demands"
+                ],
+                "summary": "Get all demands for specific user for current week",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "2020-01-01",
+                        "description": "week for fetching demands",
+                        "name": "week",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "example": 123,
+                        "description": "vk user id",
+                        "name": "vk_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.DemandsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Add a list of user demands for session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "demands"
+                ],
+                "summary": "Add demands",
+                "parameters": [
+                    {
+                        "description": "A list of demands",
+                        "name": "demands",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.DemandsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.DemandsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/masters": {
+            "get": {
+                "description": "Returns a list of masters in JSON format",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "masters"
+                ],
+                "summary": "Get all masters",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.MastersResponseWithPayload"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "UpdateMasters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "masters"
+                ],
+                "summary": "Update masters",
+                "parameters": [
+                    {
+                        "description": "A list of masters",
+                        "name": "demands",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.MastersRequestWithPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Add list of masters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "masters"
+                ],
+                "summary": "Add list of masters",
+                "parameters": [
+                    {
+                        "description": "A list of masters",
+                        "name": "demands",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.MastersRequestWithPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "DeleteMasters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "masters"
+                ],
+                "summary": "Delete masters",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "List of master IDs",
+                        "name": "masterIDs",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/masters_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/register": {
             "post": {
                 "description": "Add new user and returns token for basic auth",
@@ -61,6 +309,172 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/authenticate_requests.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/slots": {
+            "get": {
+                "description": "Returns a list of slots for current week",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "slots"
+                ],
+                "summary": "Get all slots",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "2020-01-01",
+                        "description": "min date for getting slots",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "2020-01-01",
+                        "description": "max date for getting slots",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.SlotsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update slots",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "slots"
+                ],
+                "summary": "Update slots",
+                "parameters": [
+                    {
+                        "description": "list of slots",
+                        "name": "slots",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.SlotsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Add list of new slots",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "slots"
+                ],
+                "summary": "Add slots",
+                "parameters": [
+                    {
+                        "description": "list of slots",
+                        "name": "slots",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.SlotsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete slots by list of id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "slots"
+                ],
+                "summary": "Delete slots",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "List of slot IDs",
+                        "name": "slot_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/slots_handlers.ErrorResponse"
                         }
                     }
                 }
@@ -135,6 +549,139 @@ const docTemplate = `{
                 }
             }
         },
+        "demands_handlers.DemandsRequest": {
+            "type": "object",
+            "properties": {
+                "demands": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Demand"
+                    }
+                }
+            }
+        },
+        "demands_handlers.DemandsResponse": {
+            "type": "object",
+            "properties": {
+                "demands": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Demand"
+                    }
+                }
+            }
+        },
+        "demands_handlers.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "bad_demands": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Demand"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "masters_handlers.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "masters_handlers.MastersRequestWithPayload": {
+            "type": "object",
+            "properties": {
+                "dnd_masters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Master"
+                    }
+                }
+            }
+        },
+        "masters_handlers.MastersResponseWithPayload": {
+            "type": "object",
+            "properties": {
+                "dnd_masters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Master"
+                    }
+                }
+            }
+        },
+        "models.Demand": {
+            "type": "object",
+            "properties": {
+                "first_name": {
+                    "type": "string"
+                },
+                "for_week": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "players_count": {
+                    "type": "integer"
+                },
+                "slots": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Slot"
+                    }
+                },
+                "vk_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Master": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "vk_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Slot": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 13
+                },
+                "name": {
+                    "type": "string",
+                    "example": "пн вечер"
+                },
+                "valid_from": {
+                    "type": "string",
+                    "example": "2020-01-01"
+                },
+                "valid_until": {
+                    "type": "string",
+                    "example": "2020-01-01"
+                }
+            }
+        },
         "models.User": {
             "type": "object",
             "properties": {
@@ -152,6 +699,36 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "slots_handlers.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "slots_handlers.SlotsRequest": {
+            "type": "object",
+            "properties": {
+                "slots": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Slot"
+                    }
+                }
+            }
+        },
+        "slots_handlers.SlotsResponse": {
+            "type": "object",
+            "properties": {
+                "slots": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Slot"
+                    }
                 }
             }
         }

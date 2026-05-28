@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"dnd_schedule/internal/config"
-	authenticate_service "dnd_schedule/internal/domain/service/authenticate-service"
-	"dnd_schedule/internal/presentation/features/authenticate/authenticate_requests"
+	authenticateservice "dnd_schedule/internal/domain/service/authenticate-service"
+	"dnd_schedule/internal/presentation/features/authenticate/authenticate-requests"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,11 +15,11 @@ type IAuthHandler interface {
 }
 
 type AuthHandler struct {
-	service authenticate_service.AuthService
+	service authenticateservice.AuthService
 	cfg     config.ConfigProvider
 }
 
-func NewAuthHandler(cfg config.ConfigProvider, service authenticate_service.AuthService) *AuthHandler {
+func NewAuthHandler(cfg config.ConfigProvider, service authenticateservice.AuthService) *AuthHandler {
 	return &AuthHandler{service: service, cfg: cfg}
 }
 
