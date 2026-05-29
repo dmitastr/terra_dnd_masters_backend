@@ -1,0 +1,8 @@
+with-expecter: true        # генерирует type-safe EXPECT() хелперы
+filename: "mock_{{.InterfaceName}}.go"
+dir: '{{.InterfaceDir}}/mocks'
+outpkg: "mocks"
+packages:
+  dnd_schedule/internal/repository/datasources/demands:
+    interfaces:
+      IDatasource:

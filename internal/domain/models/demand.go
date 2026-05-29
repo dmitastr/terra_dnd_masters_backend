@@ -15,6 +15,8 @@ type Demand struct {
 	LastName     string    `json:"last_name" db:"last_name"`
 	ForWeek      time.Time `json:"for_week" db:"for_week"`
 	PlayersCount int       `json:"players_count" db:"players_count"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }
 
 func (d *Demand) IsValid() bool {

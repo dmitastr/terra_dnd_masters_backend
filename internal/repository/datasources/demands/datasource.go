@@ -15,7 +15,7 @@ type IDatasource interface {
 	GetDemands(ctx context.Context, week time.Time) ([]models.Demand, error)
 	GetDemandsByVkID(ctx context.Context, week time.Time, vkID int) ([]models.Demand, error)
 	AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
-	UpdateDemand(ctx context.Context, demand *models.Demand) (*models.Demand, error)
+	UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
 	DeleteDemands(ctx context.Context, demandIDs []int) error
 }
 
@@ -144,13 +144,61 @@ func (d DemandsDS) AddDemands(ctx context.Context, demands []models.Demand) ([]m
 	return demands, nil
 }
 
-func (d DemandsDS) UpdateDemand(ctx context.Context, demand *models.Demand) (*models.Demand, error) {
-	d.log.WithField("demand", demand).Info("updating demand")
-	query := `UPDATE demands SET slots = $1 WHERE id = $2`
-	_, err := d.pool.Exec(ctx, query, demand.Slots, demand.ID)
-	if err != nil {
-		d.log.WithError(err).Error("error updating demand")
-		return nil, err
+func (d DemandsDS) UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
+	if len(demands) == 0 {
+		return nil, nil
 	}
-	return demand, nil
+
+	const query = `
+        UPDATE demands AS t
+        SET
+            slots       = v.slots,
+            players_count = v.players_count,
+            updated_at = v.updated_at
+        FROM (
+            SELECT
+                UNNEST($1::int[])         AS vk_id,
+                UNNEST($2::text[])        AS for_week,
+                UNNEST($3::timestamptz[]) AS updated_at,
+                UNNEST($5::jsonb[]) AS slots
+        ) AS v
+        WHERE t.vk_id = v.vk_id AND v.for_week = t.for_week
+        RETURNING t.id, t.created_at, t.updated_at, t.vk_id`
+
+	ids := make([]int, len(demands))
+	vkIDs := make([]int, len(demands))
+	forWeeks := make([]interface{}, len(demands))
+	slots := make([]interface{}, len(demands))
+	updatedAts := make([]interface{}, len(demands))
+
+	for i, m := range demands {
+		ids[i] = m.ID
+		vkIDs[i] = m.VkID
+		updatedAts[i] = m.UpdatedAt
+		forWeeks[i] = m.ForWeek
+		slots[i] = m.Slots
+	}
+
+	rows, err := d.pool.Query(ctx, query, ids, vkIDs, updatedAts)
+	if err != nil {
+		d.log.WithError(err).WithField("count", len(demands)).Error("UpdateDemands: query failed")
+		return nil, fmt.Errorf("UpdateDemands: %w", err)
+	}
+	defer rows.Close()
+
+	updated, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Demand])
+	if err != nil {
+		d.log.WithError(err).Error("UpdateDemands: scanning rows failed")
+		return nil, fmt.Errorf("UpdateDemands: %w", err)
+	}
+
+	if len(updated) != len(demands) {
+		d.log.WithFields(logrus.Fields{
+			"requested": len(demands),
+			"updated":   len(updated),
+		}).Warn("UpdateDemands: some IDs were not found")
+	}
+
+	d.log.WithField("count", len(updated)).Debug("UpdateDemands: ok")
+	return updated, nil
 }

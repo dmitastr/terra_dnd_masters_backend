@@ -19,6 +19,7 @@ type IDemandsService interface {
 	GetDemands(ctx context.Context, week time.Time) ([]models.Demand, error)
 	GetDemandsForUser(ctx context.Context, week time.Time, vkID int) ([]models.Demand, error)
 	AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
+	UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
 	DeleteDemands(ctx context.Context, demandsIDs []int) error
 }
 
@@ -29,6 +30,28 @@ type DemandsService struct {
 
 func NewDemandsService(datasource demands.IDatasource, log *logrus.Logger) IDemandsService {
 	return &DemandsService{datasource: datasource, Logger: log}
+}
+
+func (m DemandsService) UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
+	m.WithFields(logrus.Fields{
+		"count": len(demands),
+	}).Debug("UpdateDemands start")
+
+	for _, demand := range demands {
+		if !demand.IsValid() {
+			m.WithError(InvalidDemands).Errorf("invalid demands: %v", demand)
+			return nil, InvalidDemands
+		}
+	}
+
+	newDemands, err := m.datasource.UpdateDemands(ctx, demands)
+	if err != nil {
+		m.WithError(err).Error("error adding demands")
+		return nil, fmt.Errorf("error adding demands: %v", err)
+	}
+
+	m.Debug("UpdateDemands end")
+	return newDemands, nil
 }
 
 func (m DemandsService) GetDemandsForUser(ctx context.Context, week time.Time, vkID int) ([]models.Demand, error) {
