@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"dnd_schedule/internal/domain/models"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -33,12 +34,12 @@ func (d Datasource) AddUser(ctx context.Context, user *models.User) (*models.Use
 
 	var userID models.UserID
 	if err := tx.QueryRow(ctx, query, user.ToNamedArgs()).Scan(&userID); err != nil {
-		tx.Rollback(ctx)
+		_ = tx.Rollback(ctx)
 		return nil, fmt.Errorf("could not add user: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		tx.Rollback(ctx)
+		_ = tx.Rollback(ctx)
 		return nil, fmt.Errorf("could not commit transaction: %w", err)
 	}
 	log.Println("Successfully add user")

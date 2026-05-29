@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	InvalidDemands = errors.New("invalid Demands")
+	ErrInvalidDemands = errors.New("invalid Demands")
 )
 
 type IDemandsService interface {
@@ -39,8 +39,8 @@ func (m DemandsService) UpdateDemands(ctx context.Context, demands []models.Dema
 
 	for _, demand := range demands {
 		if !demand.IsValid() {
-			m.WithError(InvalidDemands).Errorf("invalid demands: %v", demand)
-			return nil, InvalidDemands
+			m.WithError(ErrInvalidDemands).Errorf("invalid demands: %v", demand)
+			return nil, ErrInvalidDemands
 		}
 	}
 
@@ -90,8 +90,8 @@ func (m DemandsService) AddDemands(ctx context.Context, demands []models.Demand)
 
 	for _, demand := range demands {
 		if !demand.IsValid() {
-			m.WithError(InvalidDemands).Errorf("invalid demands: %v", demand)
-			return nil, InvalidDemands
+			m.WithError(ErrInvalidDemands).Errorf("invalid demands: %v", demand)
+			return nil, ErrInvalidDemands
 		}
 	}
 

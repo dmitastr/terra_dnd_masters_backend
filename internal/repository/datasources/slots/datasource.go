@@ -38,7 +38,7 @@ func (s *SlotsDS) UpdateDefaultSlots(ctx context.Context, slots []models.Slot) (
 	}
 
 	if _, err := tx.Exec(ctx, `DELETE FROM slots_default`); err != nil {
-		tx.Rollback(ctx)
+		_ = tx.Rollback(ctx)
 		s.log.WithError(err).Error("error deleting default slot")
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (s *SlotsDS) UpdateDefaultSlots(ctx context.Context, slots []models.Slot) (
 		_, err := br.Exec()
 		if err != nil {
 			s.log.WithError(err).Error("Error adding default slots to DS")
-			tx.Rollback(ctx)
+			_ = tx.Rollback(ctx)
 
 			return nil, fmt.Errorf("insert slots: %w", err)
 		}

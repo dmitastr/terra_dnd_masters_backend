@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"dnd_schedule/internal/domain/models"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
