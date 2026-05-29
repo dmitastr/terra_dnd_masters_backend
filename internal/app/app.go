@@ -60,7 +60,7 @@ func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider, log *logru
 	mastersHandler := mastersHandlersPkg.NewMastersHandler(cfg, mastersService, log)
 
 	demandsDS := demands.NewDemandsDS(pool, log)
-	demandsService := demands_service.NewDemandsService(demandsDS)
+	demandsService := demands_service.NewDemandsService(demandsDS, nil)
 	demandsHandler := demandsHandlersPkg.NewDemandsHandler(cfg, demandsService)
 
 	slotsDS := slots.NewSlotsDS(pool, log)

@@ -16,7 +16,7 @@ type IDatasource interface {
 	GetDemandsByVkID(ctx context.Context, week time.Time, vkID int) ([]models.Demand, error)
 	AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
 	UpdateDemand(ctx context.Context, demand *models.Demand) (*models.Demand, error)
-	DeleteDemand(ctx context.Context, demand *models.Demand) error
+	DeleteDemands(ctx context.Context, demandIDs []int) error
 }
 
 type DemandsDS struct {
@@ -26,6 +26,27 @@ type DemandsDS struct {
 
 func NewDemandsDS(pool *pgxpool.Pool, log *logrus.Logger) IDatasource {
 	return &DemandsDS{pool: pool, log: log}
+}
+
+func (d DemandsDS) DeleteDemands(ctx context.Context, demandIDs []int) error {
+	if len(demandIDs) == 0 {
+		return nil
+	}
+
+	const query = `DELETE FROM demands WHERE id = ANY($1::int[])`
+
+	tag, err := d.pool.Exec(ctx, query, demandIDs)
+	if err != nil {
+		d.log.WithError(err).WithField("ids", demandIDs).Error("DeleteDemands: exec failed")
+		return fmt.Errorf("DeleteDemands: %w", err)
+	}
+
+	d.log.WithFields(logrus.Fields{
+		"requested": len(demandIDs),
+		"deleted":   tag.RowsAffected(),
+	}).Debug("DeleteDemands: ok")
+
+	return nil
 }
 
 func (d DemandsDS) GetDemandsByVkID(ctx context.Context, week time.Time, vkID int) ([]models.Demand, error) {
@@ -132,9 +153,4 @@ func (d DemandsDS) UpdateDemand(ctx context.Context, demand *models.Demand) (*mo
 		return nil, err
 	}
 	return demand, nil
-}
-
-func (d DemandsDS) DeleteDemand(ctx context.Context, demand *models.Demand) error {
-	// TODO implement me
-	panic("implement me")
 }

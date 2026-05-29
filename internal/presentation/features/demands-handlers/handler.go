@@ -3,6 +3,7 @@ package demands_handlers
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"dnd_schedule/internal/common/constants"
@@ -134,7 +135,36 @@ func (m DemandsHandler) AddDemands(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
+// DeleteDemands godoc
+// @Summary Delete demands
+// @Description Delete demands by list of id
+// @Tags demands
+// @Produce json
+// @Param demand_id query []int true "List of demand IDs" collectionFormat(multi)
+// @Success 204
+// @Success 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /slots [delete]
 func (m DemandsHandler) DeleteDemands(ctx *gin.Context) {
-	// TODO implement me
-	panic("implement me")
+	m.log.Debug("DeleteDemands: start")
+	ids := ctx.QueryArray("demand_id")
+
+	demandIDs := make([]int, len(ids))
+	for i, id := range ids {
+		demandID, err := strconv.Atoi(id)
+		if err != nil {
+			m.log.WithError(err).Error("Error converting demand id")
+			ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: "error converting demand id"})
+			return
+		}
+		demandIDs[i] = demandID
+	}
+
+	if err := m.service.DeleteDemands(ctx, demandIDs); err != nil {
+		m.log.WithError(err).Error("Error deleting slots")
+		ctx.JSON(http.StatusInternalServerError, ErrorResponse{Error: "internal server error"})
+		return
+	}
+	m.log.Debug("DeleteDemands: end")
+	ctx.Status(http.StatusNoContent)
 }
