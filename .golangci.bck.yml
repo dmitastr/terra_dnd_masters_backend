@@ -1,0 +1,22 @@
+linters:
+  enable:
+    - errcheck       # проверяет необработанные ошибки
+    - gosimple       # упрощение кода
+    - govet          # подозрительные конструкции
+    - ineffassign    # бесполезные присвоения
+    - staticcheck    # мощный статический анализ
+    - unused         # неиспользуемый код
+    - gofmt          # форматирование
+    - goimports      # порядок импортов
+    - misspell       # опечатки в комментариях
+    - bodyclose      # незакрытые http.Response.Body
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck   # в тестах ошибки можно не проверять
