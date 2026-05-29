@@ -22,9 +22,9 @@ jobs:
           cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.6   # последняя версия с поддержкой Go 1.25
+          version: v2.11.0   # последняя версия с поддержкой Go 1.25
           args: --timeout=5m
 
   test:
