@@ -8,6 +8,7 @@ import (
 	"dnd_schedule/internal/common/constants"
 	"dnd_schedule/internal/domain/models"
 	"dnd_schedule/internal/repository/datasources/slots"
+
 	"github.com/sirupsen/logrus"
 )
 

@@ -112,10 +112,8 @@ func (m DemandsService) AddDemands(ctx context.Context, demands []models.Demand)
 	}
 
 	m.WithFields(logrus.Fields{
-		"count":      len(demands),
-		"created_at": demands[0].CreatedAt,
-		"updated_at": demands[0].UpdatedAt,
-	}).Infoln("AddDemands example")
+		"count": len(demands),
+	}).Infoln("AddDemands info")
 
 	newDemands, err := m.datasource.AddDemands(ctx, demands)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 
 	"dnd_schedule/internal/config"
 	authenticateservice "dnd_schedule/internal/domain/service/authenticate-service"
+
 	"github.com/gin-gonic/gin"
 )
 

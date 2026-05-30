@@ -179,7 +179,7 @@ func TestAddDemands_InvalidDemand_ZeroVkID(t *testing.T) {
 	result, err := svc.AddDemands(context.Background(), []models.Demand{bad})
 
 	assert.Nil(t, result)
-	assert.ErrorIs(t, err, ErrInvalidDemands)
+	assert.ErrorIs(t, err, ErrInvalidVKID)
 	ds.AssertNotCalled(t, "AddDemands") // до datasource не доходим
 }
 
@@ -193,7 +193,7 @@ func TestAddDemands_InvalidDemand_ZeroPlayersCount(t *testing.T) {
 	result, err := svc.AddDemands(context.Background(), []models.Demand{bad})
 
 	assert.Nil(t, result)
-	assert.ErrorIs(t, err, ErrInvalidDemands)
+	assert.ErrorIs(t, err, ErrZeroPlayerCount)
 	ds.AssertNotCalled(t, "AddDemands")
 }
 
@@ -208,7 +208,7 @@ func TestAddDemands_OneInvalidAmongMany(t *testing.T) {
 	result, err := svc.AddDemands(context.Background(), []models.Demand{good, bad})
 
 	assert.Nil(t, result)
-	assert.ErrorIs(t, err, ErrInvalidDemands)
+	assert.ErrorIs(t, err, ErrInvalidVKID)
 	ds.AssertNotCalled(t, "AddDemands")
 }
 
