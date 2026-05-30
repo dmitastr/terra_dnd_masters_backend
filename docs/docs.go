@@ -32,21 +32,13 @@ const docTemplate = `{
                 "tags": [
                     "demands"
                 ],
-                "summary": "Get all demands for specific user for current week",
+                "summary": "Get all demands for current week",
                 "parameters": [
                     {
                         "type": "string",
                         "example": "2020-01-01",
-                        "description": "week for fetching demands",
+                        "description": "week",
                         "name": "week",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "example": 123,
-                        "description": "vk user id",
-                        "name": "vk_id",
                         "in": "query",
                         "required": true
                     }
@@ -90,6 +82,56 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/demands_handlers.DemandsRequest"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.DemandsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/demands_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/demands/{vk_id}": {
+            "get": {
+                "description": "Returns a list of demands for session for current week",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "demands"
+                ],
+                "summary": "Get all demands for specific user for current week",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "2020-01-01",
+                        "description": "week for fetching demands",
+                        "name": "week",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "example": 123,
+                        "description": "vk user id",
+                        "name": "vk_id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -574,12 +616,6 @@ const docTemplate = `{
         "demands_handlers.ErrorResponse": {
             "type": "object",
             "properties": {
-                "bad_demands": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Demand"
-                    }
-                },
                 "error": {
                     "type": "string"
                 }
@@ -618,6 +654,9 @@ const docTemplate = `{
         "models.Demand": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "first_name": {
                     "type": "string"
                 },
@@ -639,6 +678,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.Slot"
                     }
                 },
+                "updated_at": {
+                    "type": "string"
+                },
                 "vk_id": {
                     "type": "integer"
                 }
@@ -654,6 +696,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 },
                 "vk_id": {

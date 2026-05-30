@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"dnd_schedule/internal/domain/models"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirupsen/logrus"
@@ -84,8 +85,7 @@ func (d DemandsDS) GetDemandsByVkID(ctx context.Context, week time.Time, vkID in
 
 func (d DemandsDS) GetDemands(ctx context.Context, week time.Time) ([]models.Demand, error) {
 	d.log.WithField("week", week).Info("getting demands")
-	query := `SELECT id, vk_id, first_name, last_name, players_count, for_week, slots
-	FROM demands WHERE for_week = $1`
+	query := `SELECT id, vk_id, first_name, last_name, players_count, for_week, slots, created_at, updated_at FROM demands WHERE for_week = $1`
 
 	rows, err := d.pool.Query(ctx, query, week)
 	if err != nil {
@@ -105,11 +105,14 @@ func (d DemandsDS) GetDemands(ctx context.Context, week time.Time) ([]models.Dem
 			&demand.PlayersCount,
 			&demand.ForWeek,
 			&demand.Slots,
+			&demand.CreatedAt,
+			&demand.UpdatedAt,
 		)
 		if err != nil {
 			d.log.WithError(err).Error("error getting demands")
 			return nil, err
 		}
+
 		demands = append(demands, demand)
 	}
 	return demands, nil
@@ -121,14 +124,16 @@ func (d DemandsDS) AddDemands(ctx context.Context, demands []models.Demand) ([]m
 
 	for _, demand := range demands {
 		batch.Queue(
-			`INSERT INTO demands (vk_id, first_name, last_name, for_week, players_count, slots) 
-                   VALUES($1, $2, $3, $4, $5, $6) RETURN id`,
+			`INSERT INTO demands (vk_id, first_name, last_name, for_week, players_count, slots, created_at, updated_at) 
+                   VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
 			demand.VkID,
 			demand.FirstName,
 			demand.LastName,
 			demand.ForWeek,
 			demand.PlayersCount,
 			demand.Slots,
+			demand.CreatedAt,
+			demand.UpdatedAt,
 		)
 	}
 	br := d.pool.SendBatch(ctx, batch)

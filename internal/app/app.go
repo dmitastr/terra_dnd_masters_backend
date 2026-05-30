@@ -60,7 +60,7 @@ func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider, log *logru
 	mastersHandler := mastersHandlersPkg.NewMastersHandler(cfg, mastersService, log)
 
 	demandsDS := demands.NewDemandsDS(pool, log)
-	demandsService := demands_service.NewDemandsService(demandsDS, nil)
+	demandsService := demands_service.NewDemandsService(demandsDS, log)
 	demandsHandler := demandsHandlersPkg.NewDemandsHandler(cfg, demandsService)
 
 	slotsDS := slots.NewSlotsDS(pool, log)
@@ -128,6 +128,7 @@ func (app *DndMastersApp) registerHandlers(router *gin.Engine, mastersHandler ma
 	demandsPath.Use(middlewareProvider.VerifyJWT)
 
 	demandsPath.GET(`/`, demandsHandler.GetDemands)
+	demandsPath.GET(`/:vk_id`, demandsHandler.GetDemandForUser)
 	demandsPath.POST(`/`, demandsHandler.AddDemands)
 
 	slotsPath := apiPath.Group("slots")

@@ -81,14 +81,14 @@ func (m DemandsHandler) GetDemands(ctx *gin.Context) {
 // @Tags demands
 // @Produce json
 // @Param week query string true "week for fetching demands"  example(2020-01-01)
-// @Param vk_id query int true "vk user id" example(123)
+// @Param vk_id path int true "vk user id" example(123)
 // @Success 200 {object} DemandsResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /demands [get]
+// @Router /demands/{vk_id} [get]
 func (m DemandsHandler) GetDemandForUser(ctx *gin.Context) {
 	week := ctx.Query("week")
-	vkID := ctx.Query("vkID")
+	vkID := ctx.Param("vk_id")
 	if week == "" || vkID == "" {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: errors.New("week  and vkID is required").Error()})
 		return

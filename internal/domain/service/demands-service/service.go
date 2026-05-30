@@ -12,7 +12,9 @@ import (
 )
 
 var (
-	ErrInvalidDemands = errors.New("invalid Demands")
+	ErrInvalidDemands  = errors.New("invalid Demands")
+	ErrInvalidVKID     = errors.New("vk id is zero")
+	ErrZeroPlayerCount = errors.New("player count is zero")
 )
 
 type IDemandsService interface {
@@ -38,10 +40,17 @@ func (m DemandsService) UpdateDemands(ctx context.Context, demands []models.Dema
 	}).Debug("UpdateDemands start")
 
 	for _, demand := range demands {
-		if !demand.IsValid() {
-			m.WithError(ErrInvalidDemands).Errorf("invalid demands: %v", demand)
-			return nil, ErrInvalidDemands
+		if demand.VkID <= 0 {
+			m.WithError(ErrInvalidVKID).Errorf("invalid demands: %v", demand)
+			return nil, ErrInvalidVKID
+		} else if demand.PlayersCount <= 0 {
+			m.WithError(ErrZeroPlayerCount).Errorf("invalid demands: %v", demand)
+			return nil, ErrZeroPlayerCount
 		}
+	}
+
+	for i := range demands {
+		demands[i].UpdatedAt = time.Now()
 	}
 
 	newDemands, err := m.datasource.UpdateDemands(ctx, demands)
@@ -88,12 +97,25 @@ func (m DemandsService) AddDemands(ctx context.Context, demands []models.Demand)
 		"count": len(demands),
 	}).Debug("AddDemands start")
 
-	for _, demand := range demands {
-		if !demand.IsValid() {
-			m.WithError(ErrInvalidDemands).Errorf("invalid demands: %v", demand)
-			return nil, ErrInvalidDemands
+	for i, demand := range demands {
+		if demand.VkID <= 0 {
+			m.WithError(ErrInvalidVKID).Errorf("invalid demands: %v", demand)
+			return nil, ErrInvalidVKID
+		} else if demand.PlayersCount <= 0 {
+			m.WithError(ErrZeroPlayerCount).Errorf("invalid demands: %v", demand)
+			return nil, ErrZeroPlayerCount
 		}
+
+		now := time.Now()
+		demands[i].UpdatedAt = now
+		demands[i].CreatedAt = now
 	}
+
+	m.WithFields(logrus.Fields{
+		"count":      len(demands),
+		"created_at": demands[0].CreatedAt,
+		"updated_at": demands[0].UpdatedAt,
+	}).Infoln("AddDemands example")
 
 	newDemands, err := m.datasource.AddDemands(ctx, demands)
 	if err != nil {

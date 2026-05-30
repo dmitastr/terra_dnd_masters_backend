@@ -34,6 +34,7 @@ import (
 // @externalDocs.url          https://swagger.io/resources/open-api/
 func main() {
 	log := logrus.New()
+	logrus.SetLevel(logrus.DebugLevel)
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatal(err)
