@@ -10,6 +10,7 @@ import (
 
 	dndapp "dnd_schedule/internal/app"
 	"dnd_schedule/internal/config"
+
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )

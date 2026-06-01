@@ -7,6 +7,7 @@ import (
 	"dnd_schedule/internal/config"
 	"dnd_schedule/internal/domain/models"
 	slotsservice "dnd_schedule/internal/domain/service/slots-service"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
