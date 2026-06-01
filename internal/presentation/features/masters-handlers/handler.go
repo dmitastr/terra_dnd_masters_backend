@@ -7,7 +7,8 @@ import (
 
 	"dnd_schedule/internal/config"
 	"dnd_schedule/internal/domain/models"
-	"dnd_schedule/internal/domain/service/masters-service"
+	masters_service "dnd_schedule/internal/domain/service/masters-service"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

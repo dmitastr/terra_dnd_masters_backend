@@ -10,6 +10,7 @@ import (
 
 	dndapp "dnd_schedule/internal/app"
 	"dnd_schedule/internal/config"
+
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -34,6 +35,7 @@ import (
 // @externalDocs.url          https://swagger.io/resources/open-api/
 func main() {
 	log := logrus.New()
+	logrus.SetLevel(logrus.DebugLevel)
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatal(err)

@@ -1,3 +1,4 @@
-DROP TABLE demands;
-DROP TABLE slots;
-DROP TABLE masters;
+DROP TABLE IF EXISTS demands;
+DROP TABLE IF EXISTS slots;
+DROP TABLE IF EXISTS slots_default;
+DROP TABLE IF EXISTS masters;

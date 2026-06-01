@@ -7,6 +7,7 @@ import (
 
 	"dnd_schedule/internal/domain/models"
 	mastersDS "dnd_schedule/internal/repository/datasources/masters"
+
 	"github.com/sirupsen/logrus"
 )
 

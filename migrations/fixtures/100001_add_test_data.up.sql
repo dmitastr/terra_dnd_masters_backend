@@ -2,30 +2,31 @@ DELETE FROM demands;
 DELETE FROM masters;
 DELETE FROM slots;
 
-INSERT INTO demands  (vk_id, for_week, first_name, last_name, players_count, slots)
-VALUES (0, '2025-08-04T00:00:00Z', 'Иван', 'Пупкин',1, '[
+INSERT INTO demands  (vk_id, for_week, created_at, updated_at, first_name, last_name, players_count, slots)
+VALUES (0, '2025-08-04T00:00:00Z','2025-08-04T00:00:00Z','2025-08-04T00:00:00Z', 'Иван', 'Пупкин',1, '[
       {
         "id": 13,
         "name": "пн вечер",
-        "valid_from": "2020-01-01",
-        "valid_until": "9999-01-01"
+        "valid_from": "2020-01-01T00:00:00Z",
+        "valid_until": "9999-01-01T00:00:00Z"
       },
       {
         "id": 23,
         "name": "вт вечер",
-        "valid_from": "2020-01-01",
-        "valid_until": "9999-01-01"
+        "valid_from": "2020-01-01T00:00:00Z",
+        "valid_until": "9999-01-01T00:00:00Z"
       }
     ]'::jsonb),
 
-       (1, '2025-08-04T00:00:00Z', 'Мария', 'Залупкина',2, '[
+       (1, '2025-08-04T00:00:00Z','2025-08-04T00:00:00Z','2025-08-04T00:00:00Z', 'Мария', 'Залупкина',2, '[
       {
         "id": 61,
         "name": "сб утро",
-        "valid_from": "2020-01-01",
-        "valid_until": "9999-01-01"
+        "valid_from": "2020-01-01T00:00:00Z",
+        "valid_until": "9999-01-01T00:00:00Z"
       }
-    ]'::jsonb);
+    ]'::jsonb)
+on conflict do nothing;
 
 INSERT INTO slots (id, name, valid_from, valid_until)
 VALUES
@@ -39,7 +40,7 @@ VALUES
     (63, 'сб вечер','1970-01-01T00:00:00Z', '9999-12-31T23:59:00Z' ),
     (71, 'вс утро','1970-01-01T00:00:00Z', '9999-12-31T23:59:00Z' ),
     (73, 'вс вечер','1970-01-01T00:00:00Z', '9999-12-31T23:59:00Z' )
-;
+on conflict do nothing;
 
 INSERT INTO slots_default (id, name)
 VALUES
@@ -53,8 +54,9 @@ VALUES
     (63, 'сб вечер' ),
     (71, 'вс утро' ),
     (73, 'вс вечер' )
-;
+on conflict do nothing;
 
-INSERT INTO masters (id, name, vk_id)
-VALUES (0, 'Богдан', 111),
-       (1, 'Даниль', 999);
+INSERT INTO masters (id, name, vk_id, created_at, updated_at)
+VALUES (0, 'Богдан', 111, '2025-08-04T00:00:00Z','2025-08-04T00:00:00Z'),
+       (1, 'Даниль', 999,'2025-08-04T00:00:00Z','2025-08-04T00:00:00Z')
+on conflict do nothing;

@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"dnd_schedule/internal/config"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/golang-migrate/migrate/v4"

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/spf13/viper"
 )
@@ -23,13 +22,13 @@ type Config struct {
 func NewConfig() (*Config, error) {
 	viper.AutomaticEnv()
 
-	viper.BindEnv("PORT")
-	viper.BindEnv("HOST")
-	viper.BindEnv("DB_PORT")
-	viper.BindEnv("DB_HOST")
-	viper.BindEnv("DB_USER")
-	viper.BindEnv("DB_PASSWORD")
-	viper.BindEnv("DB_NAME")
+	_ = viper.BindEnv("PORT")
+	_ = viper.BindEnv("HOST")
+	_ = viper.BindEnv("DB_PORT")
+	_ = viper.BindEnv("DB_HOST")
+	_ = viper.BindEnv("DB_USER")
+	_ = viper.BindEnv("DB_PASSWORD")
+	_ = viper.BindEnv("DB_NAME")
 
 	var config Config
 	var dbConfig DBConfig
@@ -68,13 +67,4 @@ func (c *Config) GetAddress() string {
 
 func (c *Config) GetDBConfig() *DBConfig {
 	return c.DbConfig
-}
-
-// getEnv get key environment variable if exists, otherwise return defaultValue
-func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if len(value) == 0 {
-		return defaultValue
-	}
-	return value
 }

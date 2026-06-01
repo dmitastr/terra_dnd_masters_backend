@@ -31,10 +31,6 @@ definitions:
     type: object
   demands_handlers.ErrorResponse:
     properties:
-      bad_demands:
-        items:
-          $ref: '#/definitions/models.Demand'
-        type: array
       error:
         type: string
     type: object
@@ -59,6 +55,8 @@ definitions:
     type: object
   models.Demand:
     properties:
+      created_at:
+        type: string
       first_name:
         type: string
       for_week:
@@ -73,6 +71,8 @@ definitions:
         items:
           $ref: '#/definitions/models.Slot'
         type: array
+      updated_at:
+        type: string
       vk_id:
         type: integer
     type: object
@@ -83,6 +83,8 @@ definitions:
       id:
         type: integer
       name:
+        type: string
+      updated_at:
         type: string
       vk_id:
         type: integer
@@ -153,18 +155,12 @@ paths:
     get:
       description: Returns a list of demands for session for current week
       parameters:
-      - description: week for fetching demands
+      - description: week
         example: "2020-01-01"
         in: query
         name: week
         required: true
         type: string
-      - description: vk user id
-        example: 123
-        in: query
-        name: vk_id
-        required: true
-        type: integer
       produces:
       - application/json
       responses:
@@ -180,7 +176,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/demands_handlers.ErrorResponse'
-      summary: Get all demands for specific user for current week
+      summary: Get all demands for current week
       tags:
       - demands
     post:
@@ -208,6 +204,40 @@ paths:
           schema:
             $ref: '#/definitions/demands_handlers.ErrorResponse'
       summary: Add demands
+      tags:
+      - demands
+  /demands/{vk_id}:
+    get:
+      description: Returns a list of demands for session for current week
+      parameters:
+      - description: week for fetching demands
+        example: "2020-01-01"
+        in: query
+        name: week
+        required: true
+        type: string
+      - description: vk user id
+        example: 123
+        in: path
+        name: vk_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/demands_handlers.DemandsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/demands_handlers.ErrorResponse'
+      summary: Get all demands for specific user for current week
       tags:
       - demands
   /masters:
