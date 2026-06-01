@@ -9,7 +9,8 @@ import (
 	"dnd_schedule/internal/common/constants"
 	"dnd_schedule/internal/config"
 	"dnd_schedule/internal/domain/models"
-	"dnd_schedule/internal/domain/service/demands-service"
+	demands_service "dnd_schedule/internal/domain/service/demands-service"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
