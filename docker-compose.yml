@@ -1,32 +1,32 @@
 services:
-  server:
-    build: .
+  backend:
+    build: ./backend
     ports:
-      - "8080:8080"
+      - ":8080"
     depends_on:
       postgres:
         condition: service_healthy
         restart: true
     networks:
       - my_network
-    environment:
-      HOST: 0.0.0.0
-      PORT: 8080
-      DB_USER: postgres
-      DB_PASSWORD: passw
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: dndmasters_db
-    restart: always
+    env_file: .env
+    restart: unless-stopped
+
+  client:
+    build: ./client
+    depends_on:
+      - backend
+    networks:
+      - my_network
+    env_file: .env
+    restart: unless-stopped
 
   postgres:
     image: library/postgres:17.2-alpine
     container_name: dndmasters_pg
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: passw
-      POSTGRES_DB: dndmasters_db
-      PGDATA: /var/lib/postgresql/data/pgdata
+    env_file: .env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     deploy:
       resources:
         limits:
@@ -44,18 +44,19 @@ services:
                -c wal_buffers=16MB
                -c default_statistics_target=100
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d dndmasters_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 30s
       timeout: 10s
       retries: 5
     restart: unless-stopped
     tty: true
     stdin_open: true
-    ports:
-      - "5432:5432"
     networks:
       - my_network
 
 networks:
   my_network:
     driver: bridge
+
+volumes:
+  pgdata:
