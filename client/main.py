@@ -47,13 +47,16 @@ VK-бот: сбор заявки (количество игроков + выбо
    (подключение к БД, конфиг и т.п.) — в блоке `if __name__ == "__main__"`.
 """
 
+import csv
+import io
 import json
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
 import os
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Protocol, Set
 
+import arrow
 import vk_api
 from vk_api.bot_longpoll import VkBotEventType, VkBotLongPoll
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
@@ -71,32 +74,47 @@ API_TOKEN = os.environ["CLIENT_API_KEY"]           # числовой id соо�
 
 MAX_SLOTS = 5      # сколько кнопок-слотов показывается на одной странице
 MIN_PLAYERS = 1     # минимальное количество игроков
+# команды, которые запускают диалог
+START_COMMANDS = ["/start", "начать", "старт"]
+ADD_DEMAND_COMMAND = "Записаться"
+SHOW_DEMAND_COMMAND = "Мои заявки"
+GET_DEMANDS_COMMAND = "Выгрузить заявки"
+ADMIN_IDS: set[int] = {947119, 100456345}
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
 
-def shift_id(shift: Any) -> Any:
+def slot_id(shift: Any) -> Any:
     """
     Достаёт идентификатор смены — он используется как ключ в payload кнопки
     и в slots_selected. Если у объекта, который возвращает ваш Datasource,
     поле называется иначе (например shift_id вместо id) — поправьте только
     эту строку.
     """
-    return shift.id
+    return shift["id"]
 
 
-def shift_label(shift: Any) -> str:
+def slot_label(shift: Any) -> str:
     """
     Достаёт человекочитаемое название смены для подписи на кнопке
     (например "Пн 18:00–20:00"). Поправьте под реальное поле вашего Shift —
     например shift.name или shift["title"], если это dict.
     """
-    return shift.title
+    return shift["name"]
+
+
+def get_next_week(short: bool = True) -> str:
+    next_week = arrow.now().shift(days=1-arrow.now().isoweekday()+7)
+    if short:
+        return next_week.format("YYYY-MM-DD")
+
+    return next_week.isoformat()
 
 
 # ─────────────────────────────── СОСТОЯНИЕ ───────────────────────────────
+
 
 class Step(str, Enum):
     PLAYERS = "players"
@@ -117,6 +135,9 @@ class UserState:
     slots_selected: Set[Any] = field(default_factory=set)
     peer_id: int = 0
     message_id: int = 0  # id сообщения с клавиатурой, которое мы перерисовываем
+    first_name: str = "Игрок"
+    last_name: str = ""
+    username: str = "NONE"  # можно достать из профиля VK, если нужно
 
 
 # user_id -> UserState. Для прод-варианта стоит заменить на Redis/БД,
@@ -141,14 +162,27 @@ def _payload(**kwargs) -> dict:
     return kwargs
 
 
+def build_keyboard(user_id: int) -> str:
+  # из env/конфига
+    keyboard = VkKeyboard(one_time=False)
+
+    keyboard.add_button(ADD_DEMAND_COMMAND, color=VkKeyboardColor.PRIMARY)
+    keyboard.add_button(SHOW_DEMAND_COMMAND, color=VkKeyboardColor.SECONDARY)
+
+    if user_id in ADMIN_IDS:
+        keyboard.add_line()
+        keyboard.add_button(GET_DEMANDS_COMMAND,
+                            color=VkKeyboardColor.NEGATIVE)
+
+    return keyboard.get_keyboard()
+
+
 def build_players_keyboard(players: int) -> VkKeyboard:
     """Клавиатура шага 1: выбор количества игроков."""
     kb = VkKeyboard(inline=True)
 
     kb.add_callback_button("−", color=VkKeyboardColor.NEGATIVE,
                            payload=_payload(action="players_minus"))
-    kb.add_callback_button(f"Игроков: {players}", color=VkKeyboardColor.SECONDARY,
-                           payload=_payload(action="noop"))
     kb.add_callback_button("+", color=VkKeyboardColor.POSITIVE,
                            payload=_payload(action="players_plus"))
 
@@ -177,10 +211,14 @@ def build_slots_keyboard(page: int, selected: Set[Any], slots: List[Any]) -> VkK
     page_slots = slots[start:start + MAX_SLOTS]
 
     for i, shift in enumerate(page_slots):
-        color = VkKeyboardColor.POSITIVE if shift_id(
+        # prefix = "[x]" if slot_id(shift) in selected else "[ ]"
+        # kb.add_callback_button("{0} {1}".format(prefix, slot_label(shift)), color=VkKeyboardColor.SECONDARY,
+        #                        payload=_payload(action="slot_toggle", slot=slot_id(shift)))
+
+        color = VkKeyboardColor.POSITIVE if slot_id(
             shift) in selected else VkKeyboardColor.SECONDARY
-        kb.add_callback_button(shift_label(shift), color=color,
-                               payload=_payload(action="slot_toggle", slot=shift_id(shift)))
+        kb.add_callback_button(slot_label(shift), color=color,
+                               payload=_payload(action="slot_toggle", slot=slot_id(shift)))
         if i != len(page_slots) - 1:
             kb.add_line()  # каждый слот — на своей строке, так заметнее подсветка
 
@@ -198,12 +236,49 @@ def build_slots_keyboard(page: int, selected: Set[Any], slots: List[Any]) -> VkK
 
 # ─────────────────────────────── БОТ ───────────────────────────────
 
+@dataclass(frozen=True, slots=True)
+class MessageContext:
+    from_id: int
+    peer_id: int
+    text: str
+
+
+class CommandHandler(Protocol):
+    def __call__(self, ctx: MessageContext) -> None: ...
+
+
 class Bot:
-    def __init__(self, token: str, group_id: int, datasource: Datasource) -> None:
+    def __init__(self, token: str, group_id: int, datasource: Datasource, allowed_days: list[int]) -> None:
+        self.allowed_days = allowed_days
         self.vk_session = vk_api.VkApi(token=token)
+        self.upload = vk_api.VkUpload(self.vk_session)
         self.vk = self.vk_session.get_api()
         self.long_poll = VkBotLongPoll(self.vk_session, group_id)
         self.datasource = datasource
+
+        self._command_handlers: dict[str, Callable[[MessageContext], None]] = {
+            **{cmd.lower(): self.handle_start for cmd in START_COMMANDS},
+            SHOW_DEMAND_COMMAND.lower(): self.handle_show_my_demands,
+            ADD_DEMAND_COMMAND.lower(): self.handle_add_demand,
+            GET_DEMANDS_COMMAND.lower(): self.handle_get_all_demands,
+        }
+
+    def _dispatch(self, event) -> None:
+        match event.type:
+            case VkBotEventType.MESSAGE_NEW:
+                self._handle_message_new(event.object.message)
+            case VkBotEventType.MESSAGE_EVENT:
+                self.handle_callback(event.object)
+
+    def _handle_message_new(self, message: dict) -> None:
+        ctx = MessageContext(
+            from_id=message.get("from_id"),
+            peer_id=message.get("peer_id"),
+            text=(message.get("text") or "").strip().lower(),
+        )
+        handler = self._command_handlers.get(ctx.text)
+        if handler:
+            handler(ctx)
 
     # ---- получение данных ----
 
@@ -217,7 +292,7 @@ class Bot:
         не падал — пользователь увидит шаг с сообщением "смен не найдено".
         """
         try:
-            return list(self.datasource.get_shifts(user_id))
+            return list(self.datasource.get_slots(user_id))
         except Exception:
             log.exception(
                 "Не удалось получить смены из Datasource для user_id=%s", user_id)
@@ -262,10 +337,12 @@ class Bot:
                        build_players_keyboard(state.players))
 
     def render_slots_step(self, state: UserState) -> None:
+        log.info(
+            f"Rendering selected slots for user_id={state.peer_id}: {state.slots_selected}")
         if not state.slots:
             text = "Шаг 2 из 2. Свободных смен не найдено — можно отправить заявку без них."
         else:
-            chosen_labels = [shift_label(s) for s in state.slots if shift_id(
+            chosen_labels = [slot_label(s) for s in state.slots if slot_id(
                 s) in state.slots_selected]
             chosen = ", ".join(chosen_labels) or "пока ничего не выбрано"
             text = f"Шаг 2 из 2. Выберите удобные слоты.\nВыбрано: {chosen}"
@@ -274,14 +351,125 @@ class Bot:
 
     # ---- обработчики ----
 
-    def handle_start(self, user_id: int, peer_id: int) -> None:
+    def handle_add_demand(self, context: MessageContext) -> None:
+        if arrow.now().isoweekday() not in self.allowed_days:
+            text = "Прием заявок на следующую неделю окончен! Проверьте свои заявки через кнопку «Мои заявки»."
+            self.vk.messages.send(
+                user_id=context.from_id,
+                message=text,
+                random_id=vk_api.utils.get_random_id(),
+            )
+            return
+
+        user_id = context.from_id
         state = reset_state(user_id)
-        state.peer_id = peer_id
+        log.info(
+            f"Start add demand conversation for user_id={user_id}, selected slots={state.slots_selected}")
+
+        state.peer_id = context.peer_id
         # свежий список смен на каждый /start
         state.slots = self._get_shifts(user_id)
         text = f"Шаг 1 из 2. Количество игроков: {state.players}"
         state.message_id = self.send_step(
-            peer_id, text, build_players_keyboard(state.players))
+            context.peer_id, text, build_players_keyboard(state.players))
+
+    def handle_show_my_demands(self, context: MessageContext) -> None:
+        user_id = context.from_id
+        # получаем актуальные заявки через Datasource
+        demands = self.datasource.get_demands(
+            user_id, for_week=get_next_week())
+        log.info(
+            f"Receive {len(demands)} demands for user {user_id}: {demands[0]}")
+
+        text = "У вас пока нет заявок на следующую неделю."
+        if demands:
+            slots = demands[0]["slots"]
+            text = "Ваши заявки на следующую неделю: {} человек, {}".format(
+                demands[0]["players_count"], ", ".join([slot_label(s) for s in slots]))
+
+        self.vk.messages.send(
+            user_id=context.from_id,
+            message=text,
+            random_id=vk_api.utils.get_random_id(),
+        )
+
+    def handle_get_all_demands(self, context: MessageContext) -> None:
+        if context.from_id not in ADMIN_IDS:
+            return
+
+        demands = self.datasource.get_all_demands(for_week=get_next_week())
+
+        text = "На следующую неделю нет заявок"
+        if demands:
+            demands_txt = [
+                "- {} {}: {} человек, {}".format(
+                    demand["first_name"], demand["last_name"], demand["players_count"], ", ".join(
+                        [slot_label(s) for s in demand["slots"]]))
+                for demand in demands
+            ]
+            text = "Заявки на следующую неделю:\n\n" + "\n".join(demands_txt)
+
+            slots = self.datasource.get_slots(context.from_id)
+            demands_table = self._create_flat_csv(demands=demands, slots=slots)
+            self.send_generated_document(
+                peer_id=context.from_id, filename="demands.csv", rows=demands_table)
+
+        self.vk.messages.send(
+            user_id=context.from_id,
+            message=text,
+            random_id=vk_api.utils.get_random_id(),
+        )
+
+    def send_generated_document(self, peer_id: int, filename: str, rows: list[list[str]]) -> None:
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerows(rows)
+        # курсор в начало, иначе последующее чтение вернёт пусто
+        buffer.seek(0)
+
+        file_obj = io.BytesIO(buffer.getvalue().encode("utf-8-sig"))
+        file_obj.name = filename  # VK API использует .name для расширения/имени
+
+        doc = self.upload.document_message(
+            doc=file_obj, peer_id=peer_id, title=filename)
+        doc_data = doc["doc"]
+        attachment = f"doc{doc_data['owner_id']}_{doc_data['id']}"
+
+        self.vk.messages.send(
+            peer_id=peer_id,
+            attachment=attachment,
+            random_id=vk_api.utils.get_random_id(),
+        )
+
+    def _create_flat_csv(self, demands: list[dict[str, Any]], slots: list[dict[str, Any]]) -> list[list[str]]:
+        slots_names = [slot_label(slot) for slot in slots]
+
+        header = ["link", "name", "username", "players_count", *slots_names]
+        rows: list[list[str]] = [header]
+        for demand in demands:
+            row: list[str] = [
+                "https://vk.ru/id{}".format(demand["vk_id"]),
+                "{first_name} {last_name}".format(**demand),
+                demand.get("vk_username", "NONE"),
+                demand.get("players_count", 1),
+            ]
+
+            current_slot_ids = set([slot_id(slot) for slot in demand["slots"]])
+            for slot in slots:
+                slot_txt = ""
+                if slot_id(slot) in current_slot_ids:
+                    slot_txt = "1"
+                row.append(slot_txt)
+            rows.append(row)
+        return rows
+
+    def handle_start(self, context: MessageContext) -> None:
+        self.vk.messages.send(
+            user_id=context.from_id,
+            message="Выберите действие:",
+            keyboard=build_keyboard(context.from_id),
+            random_id=vk_api.utils.get_random_id(),
+        )
 
     def handle_callback(self, obj: dict) -> None:
         payload_data: dict = obj.get("payload") or {}
@@ -335,9 +523,10 @@ class Bot:
             self._handle_submit(state)
 
     def _handle_submit(self, state: UserState) -> None:
-        chosen = [shift_label(s) for s in state.slots if shift_id(
+        chosen = [s for s in state.slots if slot_id(
             s) in state.slots_selected]
-        slots_text = ", ".join(chosen) if chosen else "не выбраны"
+        slots_text = ", ".join([slot_label(s)
+                               for s in chosen]) if chosen else "не выбраны"
         result_text = (
             "Заявка принята! ✅\n"
             f"Количество игроков: {state.players}\n"
@@ -347,8 +536,26 @@ class Bot:
             peer_id=state.peer_id,
             message_id=state.message_id,
             message=result_text,
-            keyboard=VkKeyboard(inline=True).get_empty_keyboard(),
+            keyboard=build_keyboard(state.peer_id),
         )
+
+        user = self.vk.users.get(
+            user_id=state.peer_id, fields="first_name,last_name,screen_name")[0]
+        first_name = user.get("first_name", "Игрок")
+        last_name = user.get("last_name", "")
+        username = user.get("screen_name", "NONE")
+
+        log.info(f"Sending post request {first_name} {last_name}, {username}")
+        self.datasource.post_demands(
+            vk_id=state.peer_id,
+            slots=chosen,
+            players_count=state.players,
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+            for_week=get_next_week(short=False)
+        )
+
         state.step = Step.DONE
 
     # ---- основной цикл ----
@@ -357,18 +564,9 @@ class Bot:
         log.info("Бот запущен, жду события...")
         for event in self.long_poll.listen():
             try:
-                if event.type == VkBotEventType.MESSAGE_NEW:
-                    message = event.object.message
-                    text = (message.get("text") or "").strip().lower()
-                    if text == "/start":
-                        self.handle_start(message.get(
-                            "from_id"), message.get("peer_id"))
-
-                elif event.type == VkBotEventType.MESSAGE_EVENT:
-                    self.handle_callback(event.object)
-
+                self._dispatch(event)
             except Exception:
-                log.exception("Ошибка при обработке события")
+                log.exception("Ошибка при обработке события: %s", event.type)
 
 
 if __name__ == "__main__":
@@ -378,4 +576,8 @@ if __name__ == "__main__":
         access_token=API_TOKEN,
         api_base=API_BASE
     )
-    Bot(TOKEN, GROUP_ID, datasource).run()
+    Bot(token=TOKEN,
+        group_id=GROUP_ID,
+        datasource=datasource,
+        allowed_days=[1, 2, 3, 4, 5, 6, 7]
+        ).run()

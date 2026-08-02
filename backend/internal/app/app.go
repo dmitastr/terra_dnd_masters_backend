@@ -119,21 +119,21 @@ func (app *DndMastersApp) registerHandlers(router *gin.Engine, mastersHandler ma
 	authPath.GET(`/token`, authHandlers.GetToken)
 
 	mastersPath := apiPath.Group("masters")
-	mastersPath.Use(middlewareProvider.VerifyJWT)
+	mastersPath.Use(middlewareProvider.Middleware())
 
 	mastersPath.GET(`/`, mastersHandler.GetMasters)
 	mastersPath.POST(`/`, mastersHandler.AddMasters)
-	mastersPath.DELETE(`/{id}`, mastersHandler.DeleteMasters)
+	mastersPath.DELETE(`/:id`, mastersHandler.DeleteMasters)
 
 	demandsPath := apiPath.Group("demands")
-	demandsPath.Use(middlewareProvider.VerifyJWT)
+	demandsPath.Use(middlewareProvider.Middleware())
 
 	demandsPath.GET(`/`, demandsHandler.GetDemands)
 	demandsPath.GET(`/:vk_id`, demandsHandler.GetDemandForUser)
 	demandsPath.POST(`/`, demandsHandler.AddDemands)
 
 	slotsPath := apiPath.Group("slots")
-	slotsPath.Use(middlewareProvider.VerifyJWT)
+	slotsPath.Use(middlewareProvider.Middleware())
 
 	slotsPath.GET(`/`, slotsHandler.GetSlots)
 	slotsPath.POST(`/`, slotsHandler.AddSlots)

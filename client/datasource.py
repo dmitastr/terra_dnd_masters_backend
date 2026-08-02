@@ -17,7 +17,7 @@ class Datasource:
         self.api_base = api_base
         self.max_tries = 3
 
-    def get_slots(self) -> list[dict[str, Any]]:
+    def get_slots(self, user_id: int) -> list[dict[str, Any]]:
         resp = self.client.get(f"{self.api_base}/slots", params={
             "from": arrow.now().date().isoformat(),
             "to": arrow.now().shift(days=7).date().isoformat()
@@ -26,12 +26,29 @@ class Datasource:
         data = resp.json()
         return data["slots"]
 
-    def post_demands(self, vk_id: int, slots: list[dict[str, Any]], players_count: int = 1, first_name: str = "Игрок", last_name: str = "") -> requests.Response | None:
-        payload = {"demands": [
-            {"vk_id": vk_id, "slots": slots, "players_count": players_count,
-             "first_name": first_name, "last_name": last_name,
-             "for_week": arrow.now().shift(days=1-arrow.now().isoweekday()).isoformat()}]}
+    def get_demands(self, user_id: int, for_week: str = "") -> list[dict[str, Any]]:
+        resp = self.client.get(
+            f"{self.api_base}/demands/{user_id}", params={"week": for_week})
+        resp.raise_for_status()
+        data = resp.json()
+        return data["demands"]
 
+    def get_all_demands(self, for_week: str = "") -> list[dict[str, Any]]:
+        resp = self.client.get(
+            f"{self.api_base}/demands", params={"week": for_week})
+        resp.raise_for_status()
+        data = resp.json()
+        return data["demands"]
+
+    def post_demands(self, vk_id: int, slots: list[dict[str, Any]], players_count: int = 1, first_name: str = "Игрок", last_name: str = "", for_week: str = "", username: str = "NONE") -> requests.Response | None:
+        payload = {"demands": [
+            {"vk_id": vk_id,
+             "slots": slots,
+             "players_count": players_count,
+             "vk_username": username,
+             "first_name": first_name,
+             "last_name": last_name,
+             "for_week": for_week}]}
         log.info(f"Sending demand: {payload}")
         resp = self.client.post(f"{self.api_base}/demands", json=payload)
 

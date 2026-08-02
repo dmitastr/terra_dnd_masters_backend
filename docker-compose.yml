@@ -1,14 +1,14 @@
 services:
   backend:
     build: ./backend
-    ports:
-      - ":8080"
     depends_on:
       postgres:
         condition: service_healthy
         restart: true
     networks:
       - my_network
+    ports:
+      - "8080:8080"
     env_file: .env
     restart: unless-stopped
 
@@ -51,6 +51,8 @@ services:
     restart: unless-stopped
     tty: true
     stdin_open: true
+    ports:
+      - "5432:5432"
     networks:
       - my_network
 

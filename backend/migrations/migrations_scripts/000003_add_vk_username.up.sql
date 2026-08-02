@@ -1,0 +1,1 @@
+ALTER TABLE demands ADD vk_username varchar(50);

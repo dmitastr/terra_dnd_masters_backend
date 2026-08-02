@@ -95,13 +95,19 @@ func (m DemandsHandler) GetDemandForUser(ctx *gin.Context) {
 		return
 	}
 
+	vkIDInt, err := strconv.Atoi(vkID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
 	dt, err := time.Parse(constants.Layout, week)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	dndDemands, err := m.service.GetDemands(ctx, dt)
+	dndDemands, err := m.service.GetDemandsForUser(ctx, dt, vkIDInt)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return

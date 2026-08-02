@@ -1,0 +1,1 @@
+ALTER TABLE demands DROP COLUMN for_week_str;

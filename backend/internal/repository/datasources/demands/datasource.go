@@ -2,8 +2,8 @@ package demands
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"time"
 
 	"dnd_schedule/internal/domain/models"
 
@@ -13,8 +13,8 @@ import (
 )
 
 type IDatasource interface {
-	GetDemands(ctx context.Context, week time.Time) ([]models.Demand, error)
-	GetDemandsByVkID(ctx context.Context, week time.Time, vkID int) ([]models.Demand, error)
+	GetDemands(ctx context.Context, week string) ([]models.Demand, error)
+	GetDemandsByVkID(ctx context.Context, week string, vkID int) ([]models.Demand, error)
 	AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
 	UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
 	DeleteDemands(ctx context.Context, demandIDs []int) error
@@ -29,7 +29,7 @@ func NewDemandsDS(pool *pgxpool.Pool, log *logrus.Logger) IDatasource {
 	return &DemandsDS{pool: pool, log: log}
 }
 
-func (d DemandsDS) DeleteDemands(ctx context.Context, demandIDs []int) error {
+func (d *DemandsDS) DeleteDemands(ctx context.Context, demandIDs []int) error {
 	if len(demandIDs) == 0 {
 		return nil
 	}
@@ -50,10 +50,13 @@ func (d DemandsDS) DeleteDemands(ctx context.Context, demandIDs []int) error {
 	return nil
 }
 
-func (d DemandsDS) GetDemandsByVkID(ctx context.Context, week time.Time, vkID int) ([]models.Demand, error) {
-	d.log.WithField("week", week).Info("getting demands by vkID")
-	query := `SELECT id, vk_id, first_name, last_name, players_count, for_week, slots
-	FROM demands WHERE for_week = $1 AND vk_id = $2`
+func (d *DemandsDS) GetDemandsByVkID(ctx context.Context, week string, vkID int) ([]models.Demand, error) {
+	d.log.WithField("week", week).WithField("vkID", vkID).Info("getting demands by vkID")
+	query := `
+	SELECT id, vk_id, first_name, last_name, players_count, 
+	for_week, slots, vk_username, updated_at, created_at
+	FROM demands WHERE for_week_str = $1 AND vk_id = $2
+    ORDER BY updated_at DESC`
 
 	rows, err := d.pool.Query(ctx, query, week, vkID)
 	if err != nil {
@@ -73,6 +76,9 @@ func (d DemandsDS) GetDemandsByVkID(ctx context.Context, week time.Time, vkID in
 			&demand.PlayersCount,
 			&demand.ForWeek,
 			&demand.Slots,
+			&demand.VkUsername,
+			&demand.UpdatedAt,
+			&demand.CreatedAt,
 		)
 		if err != nil {
 			d.log.WithError(err).Error("error getting demands")
@@ -80,15 +86,20 @@ func (d DemandsDS) GetDemandsByVkID(ctx context.Context, week time.Time, vkID in
 		}
 		demands = append(demands, demand)
 	}
+
+	if err := rows.Err(); err != nil {
+		d.log.WithError(err).Error("error iterating demands")
+		return nil, err
+	}
 	return demands, nil
 }
 
-func (d DemandsDS) GetDemands(ctx context.Context, week time.Time) ([]models.Demand, error) {
+func (d *DemandsDS) GetDemands(ctx context.Context, week string) ([]models.Demand, error) {
 	d.log.WithField("week", week).Info("getting demands")
-	query := `SELECT id, vk_id, first_name, last_name, players_count, for_week, slots, created_at, updated_at FROM demands WHERE date(for_week) = $1`
+	query := `SELECT id, vk_id, first_name, last_name, players_count, for_week, slots, created_at, updated_at, vk_username FROM demands WHERE for_week_str = $1`
 
 	rows, err := d.pool.Query(ctx, query, week)
-	if err != nil {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		d.log.WithError(err).Error("error getting demands")
 		return nil, err
 	}
@@ -107,6 +118,7 @@ func (d DemandsDS) GetDemands(ctx context.Context, week time.Time) ([]models.Dem
 			&demand.Slots,
 			&demand.CreatedAt,
 			&demand.UpdatedAt,
+			&demand.VkUsername,
 		)
 		if err != nil {
 			d.log.WithError(err).Error("error getting demands")
@@ -118,14 +130,24 @@ func (d DemandsDS) GetDemands(ctx context.Context, week time.Time) ([]models.Dem
 	return demands, nil
 }
 
-func (d DemandsDS) AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
+func (d *DemandsDS) AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
 	d.log.WithField("slots", demands).Debug("AddDemands from DS called")
 	batch := &pgx.Batch{}
 
 	for _, demand := range demands {
 		batch.Queue(
-			`INSERT INTO demands (vk_id, first_name, last_name, for_week, players_count, slots, created_at, updated_at) 
-                   VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+			`INSERT INTO demands (vk_id, first_name, last_name, for_week, players_count, slots, created_at, updated_at, vk_username, for_week_str) 
+		    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			ON CONFLICT (vk_id, for_week_str)
+			DO UPDATE SET
+				first_name    = EXCLUDED.first_name,
+				last_name     = EXCLUDED.last_name,
+				players_count = EXCLUDED.players_count,
+				slots         = EXCLUDED.slots,
+				updated_at    = EXCLUDED.updated_at,
+				vk_username   = EXCLUDED.vk_username
+			RETURNING id
+			`,
 			demand.VkID,
 			demand.FirstName,
 			demand.LastName,
@@ -134,6 +156,8 @@ func (d DemandsDS) AddDemands(ctx context.Context, demands []models.Demand) ([]m
 			demand.Slots,
 			demand.CreatedAt,
 			demand.UpdatedAt,
+			demand.VkUsername,
+			demand.ForWeekStr,
 		)
 	}
 	br := d.pool.SendBatch(ctx, batch)
@@ -149,7 +173,7 @@ func (d DemandsDS) AddDemands(ctx context.Context, demands []models.Demand) ([]m
 	return demands, nil
 }
 
-func (d DemandsDS) UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
+func (d *DemandsDS) UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
 	if len(demands) == 0 {
 		return nil, nil
 	}

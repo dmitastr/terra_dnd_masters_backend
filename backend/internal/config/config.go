@@ -11,6 +11,7 @@ import (
 type ConfigProvider interface {
 	GetAddress() string
 	GetDBConfig() *DBConfig
+	GetAPIKey() string
 }
 
 type Config struct {
@@ -67,4 +68,8 @@ func (c *Config) GetAddress() string {
 
 func (c *Config) GetDBConfig() *DBConfig {
 	return c.DbConfig
+}
+
+func (c *Config) GetAPIKey() string {
+	return c.ClientAPIKey
 }

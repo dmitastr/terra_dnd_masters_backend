@@ -8,8 +8,12 @@ import (
 
 type MiddlewareProvider struct {
 	*auth.BearerValidator
+	*auth.ClientAuthVerifier
 }
 
 func NewMiddlewareProvider(cfg config.ConfigProvider, authService authenticate_service.AuthService) *MiddlewareProvider {
-	return &MiddlewareProvider{auth.NewBearerValidator(cfg, authService)}
+	return &MiddlewareProvider{
+		BearerValidator:    auth.NewBearerValidator(cfg, authService),
+		ClientAuthVerifier: auth.NewClientAuthVerifier(cfg),
+	}
 }

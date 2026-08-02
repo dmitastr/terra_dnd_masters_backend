@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS slots (
 
 
 CREATE TABLE IF NOT EXISTS slots_default (
-    id int not null primary key ,
+    id int not null primary key ,\
     name VARCHAR(40) not null,
     valid_from TIMESTAMP not null,
     valid_until TIMESTAMP not null
