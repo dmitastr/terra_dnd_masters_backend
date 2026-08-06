@@ -145,12 +145,13 @@ func (m SlotsHandler) GetSlots(c *gin.Context) {
 	m.log.Debug("GetSlots: start")
 	from := c.Query("from")
 	to := c.Query("to")
-	if from == "" || to == "" {
+	week := c.Query("for_week")
+	if from == "" || to == "" || week == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "from and to must be provided"})
 		return
 	}
 
-	dndSlots, err := m.service.GetSlots(c, from, to)
+	dndSlots, err := m.service.GetSlots(c, week)
 	if err != nil {
 		m.log.WithError(err).Error("GetSlots")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})

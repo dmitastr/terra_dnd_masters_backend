@@ -4,3 +4,4 @@ python-dotenv>=1.2.2
 arrow==0.17.0
 vk-api>=11.10.0
 requests>=2.25.0
+pydantic

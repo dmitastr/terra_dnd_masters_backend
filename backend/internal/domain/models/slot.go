@@ -7,4 +7,5 @@ type Slot struct {
 	Name       string    `json:"name" db:"name" example:"пн вечер"`
 	ValidFrom  time.Time `json:"valid_from" db:"valid_from" example:"2020-01-01"`
 	ValidUntil time.Time `json:"valid_until" db:"valid_until" example:"2020-01-01"`
+	ForWeekStr string    `json:"for_week_str" db:"for_week_str"`
 }

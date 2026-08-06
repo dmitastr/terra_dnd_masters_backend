@@ -5,3 +5,4 @@ __pycache__/
 db/
 .github/
 .venv
+.venv-1

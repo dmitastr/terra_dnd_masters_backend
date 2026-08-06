@@ -54,7 +54,7 @@ func (d *DemandsDS) GetDemandsByVkID(ctx context.Context, week string, vkID int)
 	d.log.WithField("week", week).WithField("vkID", vkID).Info("getting demands by vkID")
 	query := `
 	SELECT id, vk_id, first_name, last_name, players_count, 
-	for_week, slots, vk_username, updated_at, created_at
+	for_week, slots, vk_username, updated_at, created_at, COALESCE(comment, '') as comment
 	FROM demands WHERE for_week_str = $1 AND vk_id = $2
     ORDER BY updated_at DESC`
 
@@ -79,6 +79,7 @@ func (d *DemandsDS) GetDemandsByVkID(ctx context.Context, week string, vkID int)
 			&demand.VkUsername,
 			&demand.UpdatedAt,
 			&demand.CreatedAt,
+			&demand.Comment,
 		)
 		if err != nil {
 			d.log.WithError(err).Error("error getting demands")
@@ -96,7 +97,9 @@ func (d *DemandsDS) GetDemandsByVkID(ctx context.Context, week string, vkID int)
 
 func (d *DemandsDS) GetDemands(ctx context.Context, week string) ([]models.Demand, error) {
 	d.log.WithField("week", week).Info("getting demands")
-	query := `SELECT id, vk_id, first_name, last_name, players_count, for_week, slots, created_at, updated_at, vk_username FROM demands WHERE for_week_str = $1`
+	query := `SELECT 
+    id, vk_id, first_name, last_name, players_count, for_week, slots, created_at, updated_at, vk_username, COALESCE(comment, '') as comment 
+    FROM demands WHERE for_week_str = $1`
 
 	rows, err := d.pool.Query(ctx, query, week)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
@@ -119,6 +122,7 @@ func (d *DemandsDS) GetDemands(ctx context.Context, week string) ([]models.Deman
 			&demand.CreatedAt,
 			&demand.UpdatedAt,
 			&demand.VkUsername,
+			&demand.Comment,
 		)
 		if err != nil {
 			d.log.WithError(err).Error("error getting demands")
@@ -136,8 +140,8 @@ func (d *DemandsDS) AddDemands(ctx context.Context, demands []models.Demand) ([]
 
 	for _, demand := range demands {
 		batch.Queue(
-			`INSERT INTO demands (vk_id, first_name, last_name, for_week, players_count, slots, created_at, updated_at, vk_username, for_week_str) 
-		    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			`INSERT INTO demands (vk_id, first_name, last_name, for_week, players_count, slots, created_at, updated_at, vk_username, for_week_str, comment) 
+		    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			ON CONFLICT (vk_id, for_week_str)
 			DO UPDATE SET
 				first_name    = EXCLUDED.first_name,
@@ -145,7 +149,8 @@ func (d *DemandsDS) AddDemands(ctx context.Context, demands []models.Demand) ([]
 				players_count = EXCLUDED.players_count,
 				slots         = EXCLUDED.slots,
 				updated_at    = EXCLUDED.updated_at,
-				vk_username   = EXCLUDED.vk_username
+				vk_username   = EXCLUDED.vk_username,
+				comment       = EXCLUDED.comment
 			RETURNING id
 			`,
 			demand.VkID,
@@ -158,6 +163,7 @@ func (d *DemandsDS) AddDemands(ctx context.Context, demands []models.Demand) ([]
 			demand.UpdatedAt,
 			demand.VkUsername,
 			demand.ForWeekStr,
+			demand.Comment,
 		)
 	}
 	br := d.pool.SendBatch(ctx, batch)

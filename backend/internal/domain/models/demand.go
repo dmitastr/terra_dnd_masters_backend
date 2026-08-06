@@ -14,6 +14,7 @@ type Demand struct {
 	VkUsername   string    `json:"vk_username" db:"vk_username"`
 	FirstName    string    `json:"first_name" db:"first_name"`
 	LastName     string    `json:"last_name" db:"last_name"`
+	Comment      string    `json:"comment" db:"comment"`
 	ForWeek      time.Time `json:"for_week" db:"for_week"`
 	ForWeekStr   string    `json:"for_week_str" db:"for_week_str"`
 	PlayersCount int       `json:"players_count" db:"players_count"`

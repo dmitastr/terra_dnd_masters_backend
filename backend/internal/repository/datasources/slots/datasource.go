@@ -3,7 +3,6 @@ package slots
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"dnd_schedule/internal/domain/models"
 
@@ -13,7 +12,7 @@ import (
 )
 
 type IDatasource interface {
-	GetSlots(ctx context.Context, from, to time.Time) ([]models.Slot, error)
+	GetSlots(ctx context.Context, forWeek string) ([]models.Slot, error)
 	GetDefaultSlots(ctx context.Context) ([]models.Slot, error)
 	UpdateDefaultSlots(ctx context.Context, slots []models.Slot) ([]models.Slot, error)
 	AddSlots(ctx context.Context, slots []models.Slot) ([]models.Slot, error)
@@ -68,10 +67,10 @@ func (s *SlotsDS) UpdateDefaultSlots(ctx context.Context, slots []models.Slot) (
 	return slots, nil
 }
 
-func (s *SlotsDS) GetSlots(ctx context.Context, from, to time.Time) ([]models.Slot, error) {
-	s.log.WithField("from", from).WithField("to", to).Debug("GetSlots from DS called")
-	query := `SELECT id, name, valid_from, valid_until FROM slots WHERE valid_from BETWEEN $1 AND $2 AND valid_until BETWEEN $1 AND $2;`
-	rows, err := s.pool.Query(ctx, query, from, to)
+func (s *SlotsDS) GetSlots(ctx context.Context, forWeek string) ([]models.Slot, error) {
+	s.log.WithField("forWeek", forWeek).Debug("GetSlots from DS called")
+	query := `SELECT id, name, valid_from, valid_until, for_week_str FROM slots WHERE for_week_str = $1`
+	rows, err := s.pool.Query(ctx, query, forWeek)
 	if err != nil {
 		s.log.WithError(err).Error("Error getting slots from DS")
 		return nil, err
@@ -83,7 +82,7 @@ func (s *SlotsDS) GetSlots(ctx context.Context, from, to time.Time) ([]models.Sl
 
 func (s *SlotsDS) GetDefaultSlots(ctx context.Context) ([]models.Slot, error) {
 	s.log.Debug("GetDefaultSlots from DS called")
-	query := `SELECT id, name, valid_from, valid_until FROM slots_default;`
+	query := `SELECT id, name, valid_from, valid_until, for_week_str FROM slots_default;`
 	rows, err := s.pool.Query(ctx, query)
 	if err != nil {
 		s.log.WithError(err).Error("Error getting slots from DS")
