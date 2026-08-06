@@ -1,0 +1,1 @@
+ALTER TABLE demands ADD COLUMN comment text;

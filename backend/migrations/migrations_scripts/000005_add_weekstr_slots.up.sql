@@ -1,0 +1,1 @@
+ALTER TABLE slots ADD COLUMN for_week_str varchar(50) NOT NULL DEFAULT '';
