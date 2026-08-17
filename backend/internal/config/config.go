@@ -32,9 +32,12 @@ func NewConfig() (*Config, error) {
 	_ = viper.BindEnv("POSTGRES_PASSWORD")
 	_ = viper.BindEnv("POSTGRES_DB")
 	_ = viper.BindEnv("CLIENT_API_KEY")
+	_ = viper.BindEnv("DB_PATH")
 
 	var config Config
 	var dbConfig DBConfig
+
+	viper.SetConfigFile(".env")
 
 	if err := viper.ReadInConfig(); err != nil {
 		if !errors.As(err, &viper.ConfigFileNotFoundError{}) {

@@ -8,6 +8,7 @@ type DBConfig struct {
 	User string `mapstructure:"POSTGRES_USER"`
 	Pass string `mapstructure:"POSTGRES_PASSWORD"`
 	Name string `mapstructure:"POSTGRES_DB"`
+	Path string `mapstructure:"DB_PATH"`
 }
 
 func (dbConfig *DBConfig) GetConnString() string {
@@ -18,4 +19,8 @@ func (dbConfig *DBConfig) GetConnString() string {
 		dbConfig.Port,
 		dbConfig.Name,
 	)
+}
+
+func (dbConfig *DBConfig) GetPath() string {
+	return dbConfig.Path
 }

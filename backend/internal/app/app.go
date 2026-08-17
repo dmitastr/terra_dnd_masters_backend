@@ -17,10 +17,6 @@ import (
 	demandsHandlersPkg "dnd_schedule/internal/presentation/features/demands-handlers"
 	mastersHandlersPkg "dnd_schedule/internal/presentation/features/masters-handlers"
 	slotsHandlersPkg "dnd_schedule/internal/presentation/features/slots-handlers"
-	"dnd_schedule/internal/repository/datasources/authenticate"
-	"dnd_schedule/internal/repository/datasources/demands"
-	"dnd_schedule/internal/repository/datasources/masters"
-	"dnd_schedule/internal/repository/datasources/slots"
 	"dnd_schedule/internal/repository/migrations"
 
 	"github.com/gin-contrib/gzip"
@@ -49,27 +45,25 @@ func NewDndMastersApp(ctx context.Context, cfg config.ConfigProvider, log *logru
 	app := &DndMastersApp{cfg: cfg}
 	router := gin.Default()
 
-	pool, err := migrations.Run(ctx, cfg.GetDBConfig())
+	// runner := migrations.NewRunner()
+	runner := migrations.NewSQLiteRunner()
+	dsProvider, err := runner.Run(ctx, cfg.GetDBConfig(), log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
 
 	// db := datasource.NewDatasource()
 
-	mastersDS := masters.NewMastersDS(pool, log)
-	mastersService := masters_service.NewMastersService(mastersDS, log)
+	mastersService := masters_service.NewMastersService(dsProvider, log)
 	mastersHandler := mastersHandlersPkg.NewMastersHandler(cfg, mastersService, log)
 
-	demandsDS := demands.NewDemandsDS(pool, log)
-	demandsService := demands_service.NewDemandsService(demandsDS, log)
+	demandsService := demands_service.NewDemandsService(dsProvider, log)
 	demandsHandler := demandsHandlersPkg.NewDemandsHandler(cfg, demandsService, log)
 
-	slotsDS := slots.NewSlotsDS(pool, log)
-	slotsService := slots_service.NewSlotsService(slotsDS, log)
+	slotsService := slots_service.NewSlotsService(dsProvider, log)
 	slotsHandler := slotsHandlersPkg.NewSlotsHandler(cfg, slotsService, log)
 
-	authDb := authenticate.NewAuthDatasource(pool)
-	authService := authenticateservice.NewAuthService(authDb)
+	authService := authenticateservice.NewAuthService(dsProvider)
 	middlewareProvider := middleware.NewMiddlewareProvider(cfg, authService)
 	authHandler := authenticate_handlers.NewAuthHandler(cfg, authService)
 

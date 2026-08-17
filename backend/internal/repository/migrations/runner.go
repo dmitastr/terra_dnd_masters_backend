@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 
 	"dnd_schedule/internal/config"
+	"dnd_schedule/internal/repository/datasources"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/sirupsen/logrus"
 
 	"github.com/golang-migrate/migrate/v4"
 
@@ -18,8 +19,19 @@ import (
 	_ "github.com/jackc/pgx/v5"
 )
 
+type IRunner interface {
+	Run(context.Context, *config.DBConfig, *logrus.Logger) (datasources.IDatasourceProvider, error)
+}
+
+type Runner struct {
+}
+
+func NewRunner() IRunner {
+	return &Runner{}
+}
+
 // Run applies all pending migrations inside a single transaction per step.
-func Run(ctx context.Context, config *config.DBConfig) (*pgxpool.Pool, error) {
+func (r *Runner) Run(ctx context.Context, config *config.DBConfig, log *logrus.Logger) (datasources.IDatasourceProvider, error) {
 	dbConfig, err := pgxpool.ParseConfig(config.GetConnString())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse database config: %w", err)
@@ -55,7 +67,9 @@ func Run(ctx context.Context, config *config.DBConfig) (*pgxpool.Pool, error) {
 	}
 	log.Println("Fixtures migration succeeded")
 
-	return pool, nil
+	dsProvider := datasources.NewDatasourceProvider(pool, log)
+
+	return dsProvider, nil
 }
 
 // runFixtures add fixtures to tables
