@@ -49,6 +49,7 @@ VK-бот: сбор заявки (количество игроков + выбо
 
 import csv
 import io
+from dotenv import load_dotenv
 import json
 import logging
 from dataclasses import dataclass, field
@@ -57,6 +58,7 @@ import os
 from typing import Any, Callable, Dict, List, Optional, Protocol, Set
 
 import arrow
+import requests
 import vk_api
 from vk_api.bot_longpoll import VkBotEventType, VkBotLongPoll
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
@@ -66,6 +68,8 @@ from datasource import Datasource, Demand
 
 # ─────────────────────────────── НАСТРОЙКИ ───────────────────────────────
 
+
+load_dotenv()  # reads variables from a .env file and sets them in os.environ
 # токен сообщества (Bot API, права: messages)
 TOKEN = os.environ["VK_TOKEN"]
 GROUP_ID = int(os.environ["VK_GROUP_ID"])
@@ -79,6 +83,7 @@ START_COMMANDS = ["/start", "начать", "старт"]
 ADD_DEMAND_COMMAND = "Записаться"
 SHOW_DEMAND_COMMAND = "Мои заявки"
 GET_DEMANDS_COMMAND = "Выгрузить заявки"
+DELETE_DEMAND_COMMAND = "Удалить заявку"
 ADMIN_IDS: set[int] = {947119, 100456345}
 
 logging.basicConfig(level=logging.INFO,
@@ -170,6 +175,9 @@ def build_keyboard(user_id: int) -> str:
 
     keyboard.add_button(ADD_DEMAND_COMMAND, color=VkKeyboardColor.PRIMARY)
     keyboard.add_button(SHOW_DEMAND_COMMAND, color=VkKeyboardColor.SECONDARY)
+    keyboard.add_line()
+    keyboard.add_button(DELETE_DEMAND_COMMAND,
+                        color=VkKeyboardColor.NEGATIVE)
 
     if user_id in ADMIN_IDS:
         keyboard.add_line()
@@ -251,6 +259,9 @@ class CommandHandler(Protocol):
 
 class Bot:
     def __init__(self, token: str, group_id: int, datasource: Datasource, allowed_days: list[int]) -> None:
+        self.http = requests.Session()
+        self.http.headers.pop('user-agent')
+
         self.allowed_days = allowed_days
         self.vk_session = vk_api.VkApi(token=token)
         self.upload = vk_api.VkUpload(self.vk_session)
@@ -263,6 +274,7 @@ class Bot:
             SHOW_DEMAND_COMMAND.lower(): self.handle_show_my_demands,
             ADD_DEMAND_COMMAND.lower(): self.handle_add_demand,
             GET_DEMANDS_COMMAND.lower(): self.handle_get_all_demands,
+            DELETE_DEMAND_COMMAND.lower(): self.handle_delete_demand,
         }
 
     def _dispatch(self, event) -> None:
@@ -383,7 +395,7 @@ class Bot:
         demands = self.datasource.get_demands(
             user_id, for_week=get_next_week())
         log.info(
-            f"Receive {len(demands)} demands for user {user_id}: {demands[0]}")
+            f"Receive {len(demands)} demands for user {user_id}")
 
         text = "У вас пока нет заявок на следующую неделю."
         if demands:
@@ -420,18 +432,87 @@ class Bot:
             random_id=vk_api.utils.get_random_id(),
         )
 
+    def handle_delete_demand(self, context: MessageContext) -> None:
+        self.datasource.delete_demands(
+            context.from_id, for_week=get_next_week(), user_id=context.from_id)
+
+        self.vk.messages.send(
+            user_id=context.from_id,
+            message="Ваши заявки на следующую неделю удалены.",
+            random_id=vk_api.utils.get_random_id(),
+        )
+
     def send_generated_document(self, peer_id: int, filename: str, rows: list[list[str]]) -> None:
         buffer = io.StringIO()
         writer = csv.writer(buffer)
         writer.writerows(rows)
-        # курсор в начало, иначе последующее чтение вернёт пусто
-        buffer.seek(0)
 
-        file_obj = io.BytesIO(buffer.getvalue().encode("utf-8-sig"))
-        file_obj.name = filename  # VK API использует .name для расширения/имени
+        file_bytes = buffer.getvalue().encode("utf-8-sig")
 
-        doc = self.upload.document_message(
-            doc=file_obj, peer_id=peer_id, title=filename)
+        upload_url = self.vk.docs.getMessagesUploadServer(
+            peer_id=peer_id, type="doc"
+        )["upload_url"]
+
+        session = requests.Session()
+        # VK's upload servers can reject the default requests UA
+        session.headers.pop("User-Agent", None)
+
+        print("FILENAME:", repr(filename))
+        print("FILE BYTES LENGTH:", len(file_bytes))
+        print("FILE BYTES PREFIX:", repr(file_bytes[:100]))
+
+        for attempt in range(3):
+            try:
+                raw = session.post(
+                    upload_url,
+                    files={
+                        "file": (
+                            filename,
+                            file_bytes,
+                            "text/csv",
+                        )
+                    },
+                    timeout=(10, 30),
+                )
+
+                print("UPLOAD URL:", upload_url)
+                print("STATUS:", raw.status_code)
+                print("CONTENT-TYPE:", raw.headers.get("Content-Type"))
+                print("CONTENT-LENGTH:", raw.headers.get("Content-Length"))
+                print("RESPONSE HEADERS:", dict(raw.headers))
+                print("RESPONSE BODY:", repr(raw.text[:2000]))
+
+                raw.raise_for_status()
+                break
+            except requests.exceptions.RequestException as e:
+                log.warning(
+                    "VK upload server request failed (attempt %d/3): %s", attempt + 1, e)
+                if attempt == 2:
+                    raise RuntimeError(
+                        f"VK upload server request failed after 3 attempts: {e}"
+                    ) from e
+                continue
+        if not raw.text.strip():
+            raise RuntimeError(
+                f"VK upload server returned an empty response "
+                f"(status={raw.status_code})"
+            )
+
+        try:
+            upload_response = raw.json()
+        except requests.exceptions.JSONDecodeError as e:
+            raise RuntimeError(
+                "VK upload server returned a non-JSON response: "
+                f"status={raw.status_code}, "
+                f"content_type={raw.headers.get('Content-Type')!r}, "
+                f"body={raw.text[:2000]!r}"
+            ) from e
+
+        if "file" not in upload_response:
+            raise RuntimeError(
+                f"VK upload server returned no file token: {upload_response}")
+
+        doc = self.vk.docs.save(file=upload_response["file"], title=filename)
         doc_data = doc["doc"]
         attachment = f"doc{doc_data['owner_id']}_{doc_data['id']}"
 

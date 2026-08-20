@@ -3,6 +3,7 @@ package demands
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -94,8 +95,7 @@ func (d *SQLiteDemandsDS) GetDemandsByVkID(ctx context.Context, week string, vkI
 	d.log.WithField("week", week).WithField("vkID", vkID).Info("getting demands by vkID")
 
 	const query = `
-	SELECT id, vk_id, first_name, last_name, players_count,
-	for_week, slots, vk_username, updated_at, created_at, COALESCE(comment, '') as comment
+	SELECT id, vk_id, first_name, last_name, players_count, for_week, slots, created_at, updated_at, vk_username, COALESCE(comment, '') as comment
 	FROM demands WHERE for_week_str = ? AND vk_id = ?
     ORDER BY updated_at DESC`
 
@@ -146,6 +146,7 @@ func scanDemands(rows *sql.Rows) ([]models.Demand, error) {
 
 	for rows.Next() {
 		var demand models.Demand
+		var slotsRaw []byte
 
 		if err := rows.Scan(
 			&demand.ID,
@@ -154,13 +155,18 @@ func scanDemands(rows *sql.Rows) ([]models.Demand, error) {
 			&demand.LastName,
 			&demand.PlayersCount,
 			&demand.ForWeek,
-			&demand.Slots,
+			&slotsRaw,
 			&demand.CreatedAt,
 			&demand.UpdatedAt,
 			&demand.VkUsername,
 			&demand.Comment,
 		); err != nil {
 			return nil, err
+		}
+		if len(slotsRaw) > 0 {
+			if err := json.Unmarshal(slotsRaw, &demand.Slots); err != nil {
+				return nil, fmt.Errorf("decode slots: %w", err)
+			}
 		}
 
 		demands = append(demands, demand)
@@ -205,13 +211,17 @@ func (d *SQLiteDemandsDS) AddDemands(ctx context.Context, demands []models.Deman
 	defer stmt.Close()
 
 	for i, demand := range demands {
-		err := stmt.QueryRowContext(ctx,
+		slotsRaw, err := json.Marshal(demand.Slots)
+		if err != nil {
+			return nil, fmt.Errorf("encode slots: %w", err)
+		}
+		err = stmt.QueryRowContext(ctx,
 			demand.VkID,
 			demand.FirstName,
 			demand.LastName,
 			demand.ForWeek,
 			demand.PlayersCount,
-			demand.Slots,
+			slotsRaw,
 			demand.CreatedAt,
 			demand.UpdatedAt,
 			demand.VkUsername,

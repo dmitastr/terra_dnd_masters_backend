@@ -17,6 +17,7 @@ var (
 	ErrInvalidDemands  = errors.New("invalid Demands")
 	ErrInvalidVKID     = errors.New("vk id is zero")
 	ErrZeroPlayerCount = errors.New("player count is zero")
+	ErrDemandsNotFound = errors.New("no demands found for user")
 )
 
 type IDemandsService interface {
@@ -25,6 +26,7 @@ type IDemandsService interface {
 	AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
 	UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error)
 	DeleteDemands(ctx context.Context, demandsIDs []int) error
+	DeleteDemandsByUserIdWeek(ctx context.Context, week time.Time, vkID int) error
 }
 
 type DemandsService struct {
@@ -36,7 +38,7 @@ func NewDemandsService(datasource demands.IDatasource, log *logrus.Logger) IDema
 	return &DemandsService{datasource: datasource, Logger: log}
 }
 
-func (m DemandsService) UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
+func (m *DemandsService) UpdateDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
 	m.WithFields(logrus.Fields{
 		"count": len(demands),
 	}).Debug("UpdateDemands start")
@@ -65,7 +67,7 @@ func (m DemandsService) UpdateDemands(ctx context.Context, demands []models.Dema
 	return newDemands, nil
 }
 
-func (m DemandsService) GetDemandsForUser(ctx context.Context, week time.Time, vkID int) ([]models.Demand, error) {
+func (m *DemandsService) GetDemandsForUser(ctx context.Context, week time.Time, vkID int) ([]models.Demand, error) {
 	m.WithFields(logrus.Fields{
 		"week": week,
 		"vkID": vkID,
@@ -82,7 +84,7 @@ func (m DemandsService) GetDemandsForUser(ctx context.Context, week time.Time, v
 	return currentDemands, nil
 }
 
-func (m DemandsService) GetDemands(ctx context.Context, week time.Time) ([]models.Demand, error) {
+func (m *DemandsService) GetDemands(ctx context.Context, week time.Time) ([]models.Demand, error) {
 	m.WithFields(logrus.Fields{
 		"week": week,
 	}).Debug("GetDemands start")
@@ -97,7 +99,7 @@ func (m DemandsService) GetDemands(ctx context.Context, week time.Time) ([]model
 	return currentDemands, err
 }
 
-func (m DemandsService) AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
+func (m *DemandsService) AddDemands(ctx context.Context, demands []models.Demand) ([]models.Demand, error) {
 	m.WithFields(logrus.Fields{
 		"count": len(demands),
 	}).Debug("AddDemands start")
@@ -131,7 +133,7 @@ func (m DemandsService) AddDemands(ctx context.Context, demands []models.Demand)
 	return newDemands, nil
 }
 
-func (m DemandsService) DeleteDemands(ctx context.Context, demandsIDs []int) error {
+func (m *DemandsService) DeleteDemands(ctx context.Context, demandsIDs []int) error {
 	m.WithFields(logrus.Fields{
 		"count": len(demandsIDs),
 	}).Debug("DeleteDemands start")
@@ -143,4 +145,29 @@ func (m DemandsService) DeleteDemands(ctx context.Context, demandsIDs []int) err
 
 	m.Debug("DeleteDemands end")
 	return nil
+}
+
+func (m *DemandsService) DeleteDemandsByUserIdWeek(ctx context.Context, week time.Time, vkID int) error {
+	m.WithFields(logrus.Fields{
+		"count": week,
+		"vkID":  vkID,
+	}).Debug("DeleteDemandsByUserIdWeek start")
+
+	demandsForUser, err := m.GetDemandsForUser(ctx, week, vkID)
+	if err != nil {
+		m.WithError(err).Error("error DeleteDemandsByUserIdWeek")
+		return err
+	}
+	if len(demandsForUser) == 0 {
+		return ErrDemandsNotFound
+	}
+	m.WithFields(logrus.Fields{
+		"count": len(demandsForUser),
+	}).Debug("DeleteDemands delete")
+	demandIDs := make([]int, len(demandsForUser))
+	for i, demand := range demandsForUser {
+		demandIDs[i] = demand.ID
+	}
+
+	return m.DeleteDemands(ctx, demandIDs)
 }

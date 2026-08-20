@@ -124,6 +124,7 @@ func (app *DndMastersApp) registerHandlers(router *gin.Engine, mastersHandler ma
 
 	demandsPath.GET(`/`, demandsHandler.GetDemands)
 	demandsPath.GET(`/:vk_id`, demandsHandler.GetDemandForUser)
+	demandsPath.DELETE(`/:vk_id`, demandsHandler.DeleteDemandsByUserIdWeek)
 	demandsPath.POST(`/`, demandsHandler.AddDemands)
 
 	slotsPath := apiPath.Group("slots")

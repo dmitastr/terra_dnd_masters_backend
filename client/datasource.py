@@ -62,3 +62,11 @@ class Datasource:
         if resp:
             resp.raise_for_status()
         return resp
+
+    def delete_demands(self, user_id: int, for_week: str = "") -> requests.Response | None:
+        log.info(f"Deleting demands for user {user_id} for week {for_week}")
+        resp = self.client.delete(
+            f"{self.api_base}/demands/{user_id}", params={"week": for_week})
+        if resp:
+            resp.raise_for_status()
+        return resp

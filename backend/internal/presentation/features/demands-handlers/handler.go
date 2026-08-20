@@ -32,6 +32,7 @@ type IDemandsHandler interface {
 	GetDemandForUser(ctx *gin.Context)
 	AddDemands(ctx *gin.Context)
 	DeleteDemands(c *gin.Context)
+	DeleteDemandsByUserIdWeek(c *gin.Context)
 }
 
 type DemandsHandler struct {
@@ -40,7 +41,7 @@ type DemandsHandler struct {
 	log     *logrus.Logger
 }
 
-func NewDemandsHandler(cfg config.ConfigProvider, service demands_service.IDemandsService, log *logrus.Logger) *DemandsHandler {
+func NewDemandsHandler(cfg config.ConfigProvider, service demands_service.IDemandsService, log *logrus.Logger) IDemandsHandler {
 	return &DemandsHandler{service: service, cfg: cfg, log: log}
 }
 
@@ -54,7 +55,7 @@ func NewDemandsHandler(cfg config.ConfigProvider, service demands_service.IDeman
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /demands [get]
-func (m DemandsHandler) GetDemands(ctx *gin.Context) {
+func (m *DemandsHandler) GetDemands(ctx *gin.Context) {
 	week := ctx.Query("week")
 	if week == "" {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: errors.New("week is required").Error()})
@@ -87,7 +88,7 @@ func (m DemandsHandler) GetDemands(ctx *gin.Context) {
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /demands/{vk_id} [get]
-func (m DemandsHandler) GetDemandForUser(ctx *gin.Context) {
+func (m *DemandsHandler) GetDemandForUser(ctx *gin.Context) {
 	week := ctx.Query("week")
 	vkID := ctx.Param("vk_id")
 	if week == "" || vkID == "" {
@@ -126,7 +127,7 @@ func (m DemandsHandler) GetDemandForUser(ctx *gin.Context) {
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /demands [post]
-func (m DemandsHandler) AddDemands(ctx *gin.Context) {
+func (m *DemandsHandler) AddDemands(ctx *gin.Context) {
 	var request DemandsRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		m.log.WithError(err).Error("failed to bind request body")
@@ -153,7 +154,7 @@ func (m DemandsHandler) AddDemands(ctx *gin.Context) {
 // @Success 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /slots [delete]
-func (m DemandsHandler) DeleteDemands(ctx *gin.Context) {
+func (m *DemandsHandler) DeleteDemands(ctx *gin.Context) {
 	m.log.Debug("DeleteDemands: start")
 	ids := ctx.QueryArray("demand_id")
 
@@ -174,5 +175,33 @@ func (m DemandsHandler) DeleteDemands(ctx *gin.Context) {
 		return
 	}
 	m.log.Debug("DeleteDemands: end")
+	ctx.Status(http.StatusNoContent)
+}
+
+func (m *DemandsHandler) DeleteDemandsByUserIdWeek(ctx *gin.Context) {
+	week := ctx.Query("week")
+	vkID := ctx.Param("vk_id")
+	if week == "" || vkID == "" {
+		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: errors.New("week  and vkID is required").Error()})
+		return
+	}
+
+	vkIDInt, err := strconv.Atoi(vkID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	dt, err := time.Parse(constants.Layout, week)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	if err := m.service.DeleteDemandsByUserIdWeek(ctx, dt, vkIDInt); err != nil {
+		ctx.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+	m.log.Debug("DeleteDemandsByUserIdWeek: end")
 	ctx.Status(http.StatusNoContent)
 }
